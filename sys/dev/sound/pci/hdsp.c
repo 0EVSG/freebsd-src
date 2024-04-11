@@ -318,9 +318,9 @@ hdsp_sysctl_clock_preference(SYSCTL_HANDLER_ARGS)
 	sc = oidp->oid_arg1;
 
 	/* Select sync ports table for device type. */
-	if (sc->type == HDSP_AIO)
+	if (sc->type == HDSP_9632)
 		clock_table = hdsp_clock_source_table_aio;
-	else if (sc->type == HDSP_RAYDAT)
+	else if (sc->type == HDSP_9652)
 		clock_table = hdsp_clock_source_table_rd;
 	else
 		return (ENXIO);
@@ -368,9 +368,9 @@ hdsp_sysctl_clock_source(SYSCTL_HANDLER_ARGS)
 	sc = oidp->oid_arg1;
 
 	/* Select sync ports table for device type. */
-	if (sc->type == HDSP_AIO)
+	if (sc->type == HDSP_9632)
 		clock_table = hdsp_clock_source_table_aio;
-	else if (sc->type == HDSP_RAYDAT)
+	else if (sc->type == HDSP_9652)
 		clock_table = hdsp_clock_source_table_rd;
 	else
 		return (ENXIO);
@@ -409,9 +409,9 @@ hdsp_sysctl_clock_list(SYSCTL_HANDLER_ARGS)
 	n = 0;
 
 	/* Select clock source table for device type. */
-	if (sc->type == HDSP_AIO)
+	if (sc->type == HDSP_9632)
 		clock_table = hdsp_clock_source_table_aio;
-	else if (sc->type == HDSP_RAYDAT)
+	else if (sc->type == HDSP_9652)
 		clock_table = hdsp_clock_source_table_rd;
 	else
 		return (ENXIO);
@@ -440,9 +440,9 @@ hdsp_sysctl_sync_status(SYSCTL_HANDLER_ARGS)
 	n = 0;
 
 	/* Select sync ports table for device type. */
-	if (sc->type == HDSP_AIO)
+	if (sc->type == HDSP_9632)
 		clock_table = hdsp_clock_source_table_aio;
-	else if (sc->type == HDSP_RAYDAT)
+	else if (sc->type == HDSP_9652)
 		clock_table = hdsp_clock_source_table_rd;
 	else
 		return (ENXIO);
@@ -514,8 +514,8 @@ hdsp_init(struct sc_info *sc)
 	hdsp_write_4(sc, HDSP_CONTROL_REG, sc->ctrl_register);
 
 	switch (sc->type) {
-	case HDSP_RAYDAT:
-	case HDSP_AIO:
+	case HDSP_9652:
+	case HDSP_9632:
 		period = HDSP_FREQ_AIO;
 		break;
 	default:
@@ -555,11 +555,11 @@ hdsp_attach(device_t dev)
 	rev = pci_get_revid(dev);
 	switch (rev) {
 	case PCI_REVISION_AIO:
-		sc->type = HDSP_AIO;
+		sc->type = HDSP_9632;
 		chan_map = hdsp_unified_pcm ? chan_map_aio_uni : chan_map_aio;
 		break;
 	case PCI_REVISION_RAYDAT:
-		sc->type = HDSP_RAYDAT;
+		sc->type = HDSP_9652;
 		chan_map = hdsp_unified_pcm ? chan_map_rd_uni : chan_map_rd;
 		break;
 	default:

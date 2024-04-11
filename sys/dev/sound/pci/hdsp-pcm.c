@@ -865,8 +865,8 @@ hdspchan_setspeed(kobj_t obj, void *data, uint32_t speed)
 	}
 
 	switch (sc->type) {
-	case HDSP_RAYDAT:
-	case HDSP_AIO:
+	case HDSP_9652:
+	case HDSP_9632:
 		period = HDSP_FREQ_AIO;
 		break;
 	default:

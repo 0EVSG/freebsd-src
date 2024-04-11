@@ -33,16 +33,18 @@
 #define	PCI_REVISION_AIO		212 /* TODO: HDSP 9632 revision */
 #define	PCI_REVISION_RAYDAT		0x6c
 
-#define	HDSP_AIO			0
-#define	HDSP_RAYDAT			1
+#define	HDSP_9632			0
+#define	HDSP_9652			1
 
 /* Hardware mixer */
-#define	HDSP_OUT_ENABLE_BASE		512
-#define	HDSP_IN_ENABLE_BASE		768
+#define	HDSP_OUT_ENABLE_BASE		128
+#define	HDSP_IN_ENABLE_BASE		384
+/* TODO: Mixer base is probably 4096... */
 #define	HDSP_MIXER_BASE		32768
 #define	HDSP_MAX_GAIN			32768
 
 /* Buffer */
+/* TODO: These are probably set in buffer address registers. */
 #define	HDSP_PAGE_ADDR_BUF_OUT		8192
 #define	HDSP_PAGE_ADDR_BUF_IN		(HDSP_PAGE_ADDR_BUF_OUT + 64 * 16 * 4)
 #define	HDSP_BUF_POSITION_MASK		0x000FFC0
@@ -59,6 +61,7 @@
 #define	HDSP_FREQ_MASK			(HDSP_FREQ_0 | HDSP_FREQ_1 |	\
 					HDSP_FREQ_DOUBLE | HDSP_FREQ_QUAD)
 #define	HDSP_FREQ_MASK_DEFAULT		HDSP_FREQ_48000
+/* Only needed for 9632, firmware >= 152? */
 #define	HDSP_FREQ_REG			256
 #define	HDSP_FREQ_AIO			104857600000000ULL
 
@@ -97,9 +100,12 @@
 #define	HDSP_PhoneGainMinus12dB		0
 
 /* Settings */
+/* TODO: Settings register sets frequency, for 9632 firmware >= 152. */
 #define	HDSP_SETTINGS_REG		0
+/* TODO: Out buffer address register (32) and in buffer address register (36) */
 #define	HDSP_CONTROL_REG		64
-#define	HDSP_STATUS_REG		0
+#define	HDSP_STATUS_REG			0
+/* TODO: No status1 register, selected autosync ref in status2! */
 #define	HDSP_STATUS1_REG		64
 #define	HDSP_STATUS2_REG		192
 #define	HDSP_ENABLE			(1 << 0)
@@ -115,8 +121,9 @@
 
 #define	HDSP_CHANBUF_SAMPLES		(16 * 1024)
 #define	HDSP_CHANBUF_SIZE		(4 * HDSP_CHANBUF_SAMPLES)
-#define	HDSP_DMASEGSIZE		(HDSP_CHANBUF_SIZE * HDSP_MAX_SLOTS)
+#define	HDSP_DMASEGSIZE			(HDSP_CHANBUF_SIZE * HDSP_MAX_SLOTS)
 
+/* TODO: Channel mapping for HDSP 9632. */
 #define	HDSP_CHAN_AIO_LINE		(1 << 0)
 #define	HDSP_CHAN_AIO_PHONE		(1 << 1)
 #define	HDSP_CHAN_AIO_AES		(1 << 2)
@@ -129,6 +136,7 @@
 #define	HDSP_CHAN_AIO_ALL		(HDSP_CHAN_AIO_ALL_REC | \
 					HDSP_CHAN_AIO_PHONE) \
 
+/* TODO: Channel mapping for HDSP 9652. */
 #define	HDSP_CHAN_RAY_AES		(1 << 5)
 #define	HDSP_CHAN_RAY_SPDIF		(1 << 6)
 #define	HDSP_CHAN_RAY_ADAT1		(1 << 7)
@@ -148,11 +156,13 @@ struct hdsp_channel {
 };
 
 /* Clock sources */
+/* TODO: Clock master is set in control register (1 << 4). */
 #define	HDSP_SETTING_MASTER		(1 << 0)
-#define	HDSP_SETTING_CLOCK_MASK	0x1f
+#define	HDSP_SETTING_CLOCK_MASK		0x1f
 
+/* TODO: Autosync ref is read from status2, lock and sync from status. */
 #define	HDSP_STATUS1_CLOCK_SHIFT	28
-#define	HDSP_STATUS1_CLOCK_MASK	(0x0f << HDSP_STATUS1_CLOCK_SHIFT)
+#define	HDSP_STATUS1_CLOCK_MASK		(0x0f << HDSP_STATUS1_CLOCK_SHIFT)
 #define	HDSP_STATUS1_CLOCK(n)		(((n) << HDSP_STATUS1_CLOCK_SHIFT) & \
 					HDSP_STATUS1_CLOCK_MASK)
 
