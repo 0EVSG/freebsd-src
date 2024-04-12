@@ -52,29 +52,24 @@ static SYSCTL_NODE(_hw, OID_AUTO, hdsp, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
 SYSCTL_BOOL(_hw_hdsp, OID_AUTO, unified_pcm, CTLFLAG_RWTUN,
     &hdsp_unified_pcm, 0, "Combine physical ports in one unified pcm device");
 
-static struct hdsp_clock_source hdsp_clock_source_table_rd[] = {
-	{ "internal", 0 << 1 | 1, HDSP_STATUS1_CLOCK(15),       0,       0 },
-	{ "word",     0 << 1 | 0, HDSP_STATUS1_CLOCK( 0), 1 << 24, 1 << 25 },
-	{ "aes",      1 << 1 | 0, HDSP_STATUS1_CLOCK( 1),  1 << 0,  1 << 8 },
-	{ "spdif",    2 << 1 | 0, HDSP_STATUS1_CLOCK( 2),  1 << 1,  1 << 9 },
-	{ "adat1",    3 << 1 | 0, HDSP_STATUS1_CLOCK( 3),  1 << 2, 1 << 10 },
-	{ "adat2",    4 << 1 | 0, HDSP_STATUS1_CLOCK( 4),  1 << 3, 1 << 11 },
-	{ "adat3",    5 << 1 | 0, HDSP_STATUS1_CLOCK( 5),  1 << 4, 1 << 12 },
-	{ "adat4",    6 << 1 | 0, HDSP_STATUS1_CLOCK( 6),  1 << 5, 1 << 13 },
-	{ "tco",      9 << 1 | 0, HDSP_STATUS1_CLOCK( 9), 1 << 26, 1 << 27 },
-	{ "sync_in", 10 << 1 | 0, HDSP_STATUS1_CLOCK(10),       0,       0 },
-	{ NULL,       0 << 1 | 0, HDSP_STATUS1_CLOCK( 0),       0,       0 },
+static struct hdsp_clock_source hdsp_clock_source_table_9652[] = {
+	{ "internal",    HDSP_CONTROL_MASTER,  0 << 1 | 1, HDSP_STATUS1_CLOCK(15),       0,       0 },
+	{ "adat1",     HDSP_CONTROL_CLOCK(0),  3 << 1 | 0, HDSP_STATUS1_CLOCK( 3),  1 << 2, 1 << 10 },
+	{ "adat2",     HDSP_CONTROL_CLOCK(1),  4 << 1 | 0, HDSP_STATUS1_CLOCK( 4),  1 << 3, 1 << 11 },
+	{ "adat3",     HDSP_CONTROL_CLOCK(2),  5 << 1 | 0, HDSP_STATUS1_CLOCK( 5),  1 << 4, 1 << 12 },
+	{ "spdif",     HDSP_CONTROL_CLOCK(3),  2 << 1 | 0, HDSP_STATUS1_CLOCK( 2),  1 << 1,  1 << 9 },
+	{ "word",      HDSP_CONTROL_CLOCK(4),  0 << 1 | 0, HDSP_STATUS1_CLOCK( 0), 1 << 24, 1 << 25 },
+	{ "adat_sync", HDSP_CONTROL_CLOCK(5), 10 << 1 | 0, HDSP_STATUS1_CLOCK(10),       0,       0 },
+	{ NULL,                            0,  0 << 1 | 0, HDSP_STATUS1_CLOCK( 0),       0,       0 },
 };
 
-static struct hdsp_clock_source hdsp_clock_source_table_aio[] = {
-	{ "internal", 0 << 1 | 1, HDSP_STATUS1_CLOCK(15),       0,       0 },
-	{ "word",     0 << 1 | 0, HDSP_STATUS1_CLOCK( 0), 1 << 24, 1 << 25 },
-	{ "aes",      1 << 1 | 0, HDSP_STATUS1_CLOCK( 1),  1 << 0,  1 << 8 },
-	{ "spdif",    2 << 1 | 0, HDSP_STATUS1_CLOCK( 2),  1 << 1,  1 << 9 },
-	{ "adat",     3 << 1 | 0, HDSP_STATUS1_CLOCK( 3),  1 << 2, 1 << 10 },
-	{ "tco",      9 << 1 | 0, HDSP_STATUS1_CLOCK( 9), 1 << 26, 1 << 27 },
-	{ "sync_in", 10 << 1 | 0, HDSP_STATUS1_CLOCK(10),       0,       0 },
-	{ NULL,       0 << 1 | 0, HDSP_STATUS1_CLOCK( 0),       0,       0 },
+/* TODO: Research available clock sources for 9632. */
+static struct hdsp_clock_source hdsp_clock_source_table_9632[] = {
+	{ "internal",    HDSP_CONTROL_MASTER,  0 << 1 | 1, HDSP_STATUS1_CLOCK(15),       0,       0 },
+	{ "adat",      HDSP_CONTROL_CLOCK(0),  3 << 1 | 0, HDSP_STATUS1_CLOCK( 3),  1 << 2, 1 << 10 },
+	{ "spdif",     HDSP_CONTROL_CLOCK(3),  2 << 1 | 0, HDSP_STATUS1_CLOCK( 2),  1 << 1,  1 << 9 },
+	{ "word",      HDSP_CONTROL_CLOCK(4),  0 << 1 | 0, HDSP_STATUS1_CLOCK( 0), 1 << 24, 1 << 25 },
+	{ NULL,                            0,  0 << 1 | 0, HDSP_STATUS1_CLOCK( 0),       0,       0 },
 };
 
 static struct hdsp_channel chan_map_aio[] = {
@@ -313,22 +308,22 @@ hdsp_sysctl_clock_preference(SYSCTL_HANDLER_ARGS)
 	struct hdsp_clock_source *clock_table, *clock;
 	char buf[16] = "invalid";
 	int error;
-	uint32_t setting;
+	uint32_t control;
 
 	sc = oidp->oid_arg1;
 
 	/* Select sync ports table for device type. */
 	if (sc->type == HDSP_9632)
-		clock_table = hdsp_clock_source_table_aio;
+		clock_table = hdsp_clock_source_table_9632;
 	else if (sc->type == HDSP_9652)
-		clock_table = hdsp_clock_source_table_rd;
+		clock_table = hdsp_clock_source_table_9652;
 	else
 		return (ENXIO);
 
-	/* Extract preferred clock source from settings register. */
-	setting = sc->settings_register & HDSP_SETTING_CLOCK_MASK;
+	/* Extract preferred clock source from control register. */
+	control = sc->ctrl_register & HDSP_CONTROL_CLOCK_MASK;
 	for (clock = clock_table; clock->name != NULL; ++clock) {
-		if (clock->setting == setting)
+		if (clock->control == control)
 			break;
 	}
 	if (clock->name != NULL)
@@ -345,13 +340,13 @@ hdsp_sysctl_clock_preference(SYSCTL_HANDLER_ARGS)
 			break;
 	}
 
-	/* Set preferred clock source in settings register. */
+	/* Set preferred clock source in control register. */
 	if (clock->name != NULL) {
-		setting = clock->setting & HDSP_SETTING_CLOCK_MASK;
+		control = clock->control & HDSP_CONTROL_CLOCK_MASK;
 		snd_mtxlock(sc->lock);
-		sc->settings_register &= ~HDSP_SETTING_CLOCK_MASK;
-		sc->settings_register |= setting;
-		hdsp_write_4(sc, HDSP_SETTINGS_REG, sc->settings_register);
+		sc->ctrl_register &= ~HDSP_CONTROL_CLOCK_MASK;
+		sc->ctrl_register |= control;
+		hdsp_write_4(sc, HDSP_CONTROL_REG, sc->ctrl_register);
 		snd_mtxunlock(sc->lock);
 	}
 	return (0);
@@ -369,9 +364,9 @@ hdsp_sysctl_clock_source(SYSCTL_HANDLER_ARGS)
 
 	/* Select sync ports table for device type. */
 	if (sc->type == HDSP_9632)
-		clock_table = hdsp_clock_source_table_aio;
+		clock_table = hdsp_clock_source_table_9632;
 	else if (sc->type == HDSP_9652)
-		clock_table = hdsp_clock_source_table_rd;
+		clock_table = hdsp_clock_source_table_9652;
 	else
 		return (ENXIO);
 
@@ -384,8 +379,8 @@ hdsp_sysctl_clock_source(SYSCTL_HANDLER_ARGS)
 	/* Translate status register value to clock source. */
 	for (clock = clock_table; clock->name != NULL; ++clock) {
 		/* In clock master mode, override with internal clock source. */
-		if (sc->settings_register & HDSP_SETTING_MASTER) {
-			if (clock->setting & HDSP_SETTING_MASTER)
+		if (sc->ctrl_register & HDSP_CONTROL_MASTER) {
+			if (clock->control & HDSP_CONTROL_MASTER)
 				break;
 		} else if (clock->status == status)
 			break;
@@ -410,9 +405,9 @@ hdsp_sysctl_clock_list(SYSCTL_HANDLER_ARGS)
 
 	/* Select clock source table for device type. */
 	if (sc->type == HDSP_9632)
-		clock_table = hdsp_clock_source_table_aio;
+		clock_table = hdsp_clock_source_table_9632;
 	else if (sc->type == HDSP_9652)
-		clock_table = hdsp_clock_source_table_rd;
+		clock_table = hdsp_clock_source_table_9652;
 	else
 		return (ENXIO);
 
@@ -441,9 +436,9 @@ hdsp_sysctl_sync_status(SYSCTL_HANDLER_ARGS)
 
 	/* Select sync ports table for device type. */
 	if (sc->type == HDSP_9632)
-		clock_table = hdsp_clock_source_table_aio;
+		clock_table = hdsp_clock_source_table_9632;
 	else if (sc->type == HDSP_9652)
-		clock_table = hdsp_clock_source_table_rd;
+		clock_table = hdsp_clock_source_table_9652;
 	else
 		return (ENXIO);
 
@@ -511,6 +506,11 @@ hdsp_init(struct sc_info *sc)
 	sc->force_speed = 0;
 	sc->ctrl_register &= ~HDSP_FREQ_MASK;
 	sc->ctrl_register |= HDSP_FREQ_MASK_DEFAULT;
+
+	/* Set internal clock source (master). */
+	sc->ctrl_register &= ~HDSP_CONTROL_CLOCK_MASK;
+	sc->ctrl_register |= HDSP_CONTROL_MASTER;
+
 	hdsp_write_4(sc, HDSP_CONTROL_REG, sc->ctrl_register);
 
 	switch (sc->type) {
