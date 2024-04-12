@@ -53,23 +53,23 @@ SYSCTL_BOOL(_hw_hdsp, OID_AUTO, unified_pcm, CTLFLAG_RWTUN,
     &hdsp_unified_pcm, 0, "Combine physical ports in one unified pcm device");
 
 static struct hdsp_clock_source hdsp_clock_source_table_9652[] = {
-	{ "internal",    HDSP_CONTROL_MASTER,  0 << 1 | 1, HDSP_STATUS1_CLOCK(15),       0,       0 },
-	{ "adat1",     HDSP_CONTROL_CLOCK(0),  3 << 1 | 0, HDSP_STATUS1_CLOCK( 3),  1 << 2, 1 << 10 },
-	{ "adat2",     HDSP_CONTROL_CLOCK(1),  4 << 1 | 0, HDSP_STATUS1_CLOCK( 4),  1 << 3, 1 << 11 },
-	{ "adat3",     HDSP_CONTROL_CLOCK(2),  5 << 1 | 0, HDSP_STATUS1_CLOCK( 5),  1 << 4, 1 << 12 },
-	{ "spdif",     HDSP_CONTROL_CLOCK(3),  2 << 1 | 0, HDSP_STATUS1_CLOCK( 2),  1 << 1,  1 << 9 },
-	{ "word",      HDSP_CONTROL_CLOCK(4),  0 << 1 | 0, HDSP_STATUS1_CLOCK( 0), 1 << 24, 1 << 25 },
-	{ "adat_sync", HDSP_CONTROL_CLOCK(5), 10 << 1 | 0, HDSP_STATUS1_CLOCK(10),       0,       0 },
-	{ NULL,                            0,  0 << 1 | 0, HDSP_STATUS1_CLOCK( 0),       0,       0 },
+	{ "internal",    HDSP_CONTROL_MASTER, HDSP_STATUS2_CLOCK(0),       0,       0 },
+	{ "adat1",     HDSP_CONTROL_CLOCK(0), HDSP_STATUS2_CLOCK(0),  1 << 2, 1 << 10 },
+	{ "adat2",     HDSP_CONTROL_CLOCK(1), HDSP_STATUS2_CLOCK(1),  1 << 3, 1 << 11 },
+	{ "adat3",     HDSP_CONTROL_CLOCK(2), HDSP_STATUS2_CLOCK(2),  1 << 4, 1 << 12 },
+	{ "spdif",     HDSP_CONTROL_CLOCK(3), HDSP_STATUS2_CLOCK(3),  1 << 1,  1 << 9 },
+	{ "word",      HDSP_CONTROL_CLOCK(4), HDSP_STATUS2_CLOCK(4), 1 << 24, 1 << 25 },
+	{ "adat_sync", HDSP_CONTROL_CLOCK(5), HDSP_STATUS2_CLOCK(5),       0,       0 },
+	{ NULL,                            0,                     0,       0,       0 },
 };
 
-/* TODO: Research available clock sources for 9632. */
+/* TODO: Verify available clock sources for 9632. */
 static struct hdsp_clock_source hdsp_clock_source_table_9632[] = {
-	{ "internal",    HDSP_CONTROL_MASTER,  0 << 1 | 1, HDSP_STATUS1_CLOCK(15),       0,       0 },
-	{ "adat",      HDSP_CONTROL_CLOCK(0),  3 << 1 | 0, HDSP_STATUS1_CLOCK( 3),  1 << 2, 1 << 10 },
-	{ "spdif",     HDSP_CONTROL_CLOCK(3),  2 << 1 | 0, HDSP_STATUS1_CLOCK( 2),  1 << 1,  1 << 9 },
-	{ "word",      HDSP_CONTROL_CLOCK(4),  0 << 1 | 0, HDSP_STATUS1_CLOCK( 0), 1 << 24, 1 << 25 },
-	{ NULL,                            0,  0 << 1 | 0, HDSP_STATUS1_CLOCK( 0),       0,       0 },
+	{ "internal",    HDSP_CONTROL_MASTER, HDSP_STATUS2_CLOCK(0),       0,       0 },
+	{ "adat",      HDSP_CONTROL_CLOCK(0), HDSP_STATUS2_CLOCK(0),  1 << 2, 1 << 10 },
+	{ "spdif",     HDSP_CONTROL_CLOCK(3), HDSP_STATUS2_CLOCK(3),  1 << 1,  1 << 9 },
+	{ "word",      HDSP_CONTROL_CLOCK(4), HDSP_STATUS2_CLOCK(4), 1 << 24, 1 << 25 },
+	{ NULL,                            0,                     0,       0,       0 },
 };
 
 static struct hdsp_channel chan_map_aio[] = {
@@ -358,7 +358,7 @@ hdsp_sysctl_clock_source(SYSCTL_HANDLER_ARGS)
 	struct sc_info *sc;
 	struct hdsp_clock_source *clock_table, *clock;
 	char buf[16] = "invalid";
-	uint32_t status;
+	uint32_t status2;
 
 	sc = oidp->oid_arg1;
 
@@ -370,19 +370,19 @@ hdsp_sysctl_clock_source(SYSCTL_HANDLER_ARGS)
 	else
 		return (ENXIO);
 
-	/* Read current (autosync) clock source from status register. */
+	/* Read current (autosync) clock source from status2 register. */
 	snd_mtxlock(sc->lock);
-	status = hdsp_read_4(sc, HDSP_STATUS1_REG);
-	status &= HDSP_STATUS1_CLOCK_MASK;
+	status2 = hdsp_read_4(sc, HDSP_STATUS2_REG);
+	status2 &= HDSP_STATUS2_CLOCK_MASK;
 	snd_mtxunlock(sc->lock);
 
-	/* Translate status register value to clock source. */
+	/* Translate status2 register value to clock source. */
 	for (clock = clock_table; clock->name != NULL; ++clock) {
 		/* In clock master mode, override with internal clock source. */
 		if (sc->ctrl_register & HDSP_CONTROL_MASTER) {
 			if (clock->control & HDSP_CONTROL_MASTER)
 				break;
-		} else if (clock->status == status)
+		} else if (clock->status2 == status2)
 			break;
 	}
 

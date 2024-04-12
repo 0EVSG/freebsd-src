@@ -155,23 +155,22 @@ struct hdsp_channel {
 	char		*descr;
 };
 
-/* Clock sources */
+/* Preferred clock source. */
 #define	HDSP_CONTROL_MASTER		(1 << 4)
 #define HDSP_CONTROL_CLOCK_MASK		(HDSP_CONTROL_MASTER | (1 << 13) | \
 					(1 << 16) | (1 << 17))
 #define HDSP_CONTROL_CLOCK(n)		(((n & 0x04) << 11) | ((n & 0x03) << 16))
 
-/* TODO: Autosync ref is read from status2, lock and sync from status. */
-#define	HDSP_STATUS1_CLOCK_SHIFT	28
-#define	HDSP_STATUS1_CLOCK_MASK		(0x0f << HDSP_STATUS1_CLOCK_SHIFT)
-#define	HDSP_STATUS1_CLOCK(n)		(((n) << HDSP_STATUS1_CLOCK_SHIFT) & \
-					HDSP_STATUS1_CLOCK_MASK)
+/* Autosync selected clock source. */
+#define HDSP_STATUS2_CLOCK(n)		((n & 0x07) << 8)
+#define HDSP_STATUS2_CLOCK_MASK		HDSP_STATUS2_CLOCK(0x07);
+
+/* TODO: Lock and sync bits are read from status / status2 register. */
 
 struct hdsp_clock_source {
 	char		*name;
 	uint32_t	control;
-	uint32_t	setting;
-	uint32_t	status;
+	uint32_t	status2;
 	uint32_t	lock_bit;
 	uint32_t	sync_bit;
 };
