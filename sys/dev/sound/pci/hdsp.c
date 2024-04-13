@@ -625,11 +625,9 @@ hdsp_init(struct sc_info *sc)
 		/* Set DDS value. */
 		period /= sc->speed;
 		hdsp_write_4(sc, HDSP_FREQ_REG, period);
+	} else {
+		hdsp_write_4(sc, HDSP_FREQ_REG, 0);
 	}
-
-	/* Other settings. */
-	sc->settings_register = 0;
-	hdsp_write_4(sc, HDSP_SETTINGS_REG, sc->settings_register);
 
 	return (0);
 }

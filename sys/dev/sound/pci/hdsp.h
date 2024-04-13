@@ -100,8 +100,6 @@
 #define	HDSP_PhoneGainMinus12dB		0
 
 /* Settings */
-/* TODO: Settings register sets frequency, for 9632 firmware >= 152. */
-#define	HDSP_SETTINGS_REG		0
 /* TODO: Out buffer address register (32) and in buffer address register (36) */
 #define	HDSP_CONTROL_REG		64
 #define	HDSP_STATUS_REG			0
@@ -212,7 +210,6 @@ struct sc_info {
 	struct mtx		*lock;
 
 	uint32_t		ctrl_register;
-	uint32_t		settings_register;
 	uint32_t		type;
 
 	/* Control/Status register */
