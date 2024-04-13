@@ -621,9 +621,11 @@ hdsp_init(struct sc_info *sc)
 		return (ENXIO);
 	}
 
-	/* Set DDS value. */
-	period /= sc->speed;
-	hdsp_write_4(sc, HDSP_FREQ_REG, period);
+	if (sc->type == HDSP_9632) {
+		/* Set DDS value. */
+		period /= sc->speed;
+		hdsp_write_4(sc, HDSP_FREQ_REG, period);
+	}
 
 	/* Other settings. */
 	sc->settings_register = 0;

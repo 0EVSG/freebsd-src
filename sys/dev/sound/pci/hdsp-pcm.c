@@ -873,9 +873,11 @@ hdspchan_setspeed(kobj_t obj, void *data, uint32_t speed)
 	else if (speed > 48000)
 		speed /= 2;
 
-	/* Set DDS value. */
-	period /= speed;
-	hdsp_write_4(sc, HDSP_FREQ_REG, period);
+	if (sc->type == HDSP_9632) {
+		/* Set DDS value. */
+		period /= speed;
+		hdsp_write_4(sc, HDSP_FREQ_REG, period);
+	}
 
 	sc->speed = hr->speed;
 end:

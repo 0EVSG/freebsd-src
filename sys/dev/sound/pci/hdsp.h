@@ -61,8 +61,8 @@
 #define	HDSP_FREQ_MASK			(HDSP_FREQ_0 | HDSP_FREQ_1 |	\
 					HDSP_FREQ_DOUBLE | HDSP_FREQ_QUAD)
 #define	HDSP_FREQ_MASK_DEFAULT		HDSP_FREQ_48000
-/* Only needed for 9632, firmware >= 152? */
-#define	HDSP_FREQ_REG			256
+/* TODO: Only needed for 9632, firmware >= 152? */
+#define	HDSP_FREQ_REG			0
 #define	HDSP_FREQ_AIO			104857600000000ULL
 
 #define	HDSP_SPEED_DEFAULT		48000
