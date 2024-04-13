@@ -53,23 +53,23 @@ SYSCTL_BOOL(_hw_hdsp, OID_AUTO, unified_pcm, CTLFLAG_RWTUN,
     &hdsp_unified_pcm, 0, "Combine physical ports in one unified pcm device");
 
 static struct hdsp_clock_source hdsp_clock_source_table_9652[] = {
-	{ "internal",    HDSP_CONTROL_MASTER, HDSP_STATUS2_CLOCK(0), HDSP_CLOCK_INTERNAL },
-	{ "adat1",     HDSP_CONTROL_CLOCK(0), HDSP_STATUS2_CLOCK(0), HDSP_CLOCK_ADAT1 },
-	{ "adat2",     HDSP_CONTROL_CLOCK(1), HDSP_STATUS2_CLOCK(1), HDSP_CLOCK_ADAT2 },
-	{ "adat3",     HDSP_CONTROL_CLOCK(2), HDSP_STATUS2_CLOCK(2), HDSP_CLOCK_ADAT3 },
-	{ "spdif",     HDSP_CONTROL_CLOCK(3), HDSP_STATUS2_CLOCK(3), HDSP_CLOCK_SPDIF },
-	{ "word",      HDSP_CONTROL_CLOCK(4), HDSP_STATUS2_CLOCK(4), HDSP_CLOCK_WORD },
-	{ "adat_sync", HDSP_CONTROL_CLOCK(5), HDSP_STATUS2_CLOCK(5), HDSP_CLOCK_ADAT_SYNC },
-	{ NULL,                            0,                     0, HDSP_CLOCK_INTERNAL }
+	{ "internal",  HDSP_CLOCK_INTERNAL  },
+	{ "adat1",     HDSP_CLOCK_ADAT1     },
+	{ "adat2",     HDSP_CLOCK_ADAT2     },
+	{ "adat3",     HDSP_CLOCK_ADAT3     },
+	{ "spdif",     HDSP_CLOCK_SPDIF     },
+	{ "word",      HDSP_CLOCK_WORD      },
+	{ "adat_sync", HDSP_CLOCK_ADAT_SYNC },
+	{ NULL,        HDSP_CLOCK_INTERNAL  }
 };
 
 /* TODO: Verify available clock sources for 9632. */
 static struct hdsp_clock_source hdsp_clock_source_table_9632[] = {
-	{ "internal",    HDSP_CONTROL_MASTER, HDSP_STATUS2_CLOCK(0), HDSP_CLOCK_INTERNAL },
-	{ "adat",      HDSP_CONTROL_CLOCK(0), HDSP_STATUS2_CLOCK(0), HDSP_CLOCK_ADAT1 },
-	{ "spdif",     HDSP_CONTROL_CLOCK(3), HDSP_STATUS2_CLOCK(3), HDSP_CLOCK_SPDIF },
-	{ "word",      HDSP_CONTROL_CLOCK(4), HDSP_STATUS2_CLOCK(4), HDSP_CLOCK_WORD },
-	{ NULL,                            0,                     0, HDSP_CLOCK_INTERNAL }
+	{ "internal", HDSP_CLOCK_INTERNAL },
+	{ "adat",     HDSP_CLOCK_ADAT1    },
+	{ "spdif",    HDSP_CLOCK_SPDIF    },
+	{ "word",     HDSP_CLOCK_WORD     },
+	{ NULL,       HDSP_CLOCK_INTERNAL }
 };
 
 static struct hdsp_channel chan_map_aio[] = {
@@ -301,6 +301,29 @@ hdsp_sysctl_period(SYSCTL_HANDLER_ARGS)
 	return (0);
 }
 
+static uint32_t
+hdsp_control_clock_preference(enum hdsp_clock_type type)
+{
+	switch (type) {
+	case HDSP_CLOCK_INTERNAL:
+		return (HDSP_CONTROL_MASTER);
+	case HDSP_CLOCK_ADAT1:
+		return (HDSP_CONTROL_CLOCK(0));
+	case HDSP_CLOCK_ADAT2:
+		return (HDSP_CONTROL_CLOCK(1));
+	case HDSP_CLOCK_ADAT3:
+		return (HDSP_CONTROL_CLOCK(2));
+	case HDSP_CLOCK_SPDIF:
+		return (HDSP_CONTROL_CLOCK(3));
+	case HDSP_CLOCK_WORD:
+		return (HDSP_CONTROL_CLOCK(4));
+	case HDSP_CLOCK_ADAT_SYNC:
+		return (HDSP_CONTROL_CLOCK(5));
+	default:
+		return (HDSP_CONTROL_MASTER);
+	}
+}
+
 static int
 hdsp_sysctl_clock_preference(SYSCTL_HANDLER_ARGS)
 {
@@ -323,7 +346,7 @@ hdsp_sysctl_clock_preference(SYSCTL_HANDLER_ARGS)
 	/* Extract preferred clock source from control register. */
 	control = sc->ctrl_register & HDSP_CONTROL_CLOCK_MASK;
 	for (clock = clock_table; clock->name != NULL; ++clock) {
-		if (clock->control == control)
+		if (hdsp_control_clock_preference(clock->type) == control)
 			break;
 	}
 	if (clock->name != NULL)
@@ -342,7 +365,8 @@ hdsp_sysctl_clock_preference(SYSCTL_HANDLER_ARGS)
 
 	/* Set preferred clock source in control register. */
 	if (clock->name != NULL) {
-		control = clock->control & HDSP_CONTROL_CLOCK_MASK;
+		control = hdsp_control_clock_preference(clock->type);
+		control &= HDSP_CONTROL_CLOCK_MASK;
 		snd_mtxlock(sc->lock);
 		sc->ctrl_register &= ~HDSP_CONTROL_CLOCK_MASK;
 		sc->ctrl_register |= control;
@@ -350,6 +374,29 @@ hdsp_sysctl_clock_preference(SYSCTL_HANDLER_ARGS)
 		snd_mtxunlock(sc->lock);
 	}
 	return (0);
+}
+
+static uint32_t
+hdsp_status2_clock_source(enum hdsp_clock_type type)
+{
+	switch (type) {
+	case HDSP_CLOCK_INTERNAL:
+		return (0);
+	case HDSP_CLOCK_ADAT1:
+		return (HDSP_STATUS2_CLOCK(0));
+	case HDSP_CLOCK_ADAT2:
+		return (HDSP_STATUS2_CLOCK(1));
+	case HDSP_CLOCK_ADAT3:
+		return (HDSP_STATUS2_CLOCK(2));
+	case HDSP_CLOCK_SPDIF:
+		return (HDSP_STATUS2_CLOCK(3));
+	case HDSP_CLOCK_WORD:
+		return (HDSP_STATUS2_CLOCK(4));
+	case HDSP_CLOCK_ADAT_SYNC:
+		return (HDSP_STATUS2_CLOCK(5));
+	default:
+		return (0);
+	}
 }
 
 static int
@@ -380,9 +427,9 @@ hdsp_sysctl_clock_source(SYSCTL_HANDLER_ARGS)
 	for (clock = clock_table; clock->name != NULL; ++clock) {
 		/* In clock master mode, override with internal clock source. */
 		if (sc->ctrl_register & HDSP_CONTROL_MASTER) {
-			if (clock->control & HDSP_CONTROL_MASTER)
+			if (clock->type == HDSP_CLOCK_INTERNAL)
 				break;
-		} else if (clock->status2 == status2)
+		} else if (hdsp_status2_clock_source(clock->type) == status2)
 			break;
 	}
 

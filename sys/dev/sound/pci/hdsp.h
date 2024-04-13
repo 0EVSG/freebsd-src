@@ -175,12 +175,8 @@ enum hdsp_clock_type {
 #define HDSP_STATUS2_CLOCK(n)		((n & 0x07) << 8)
 #define HDSP_STATUS2_CLOCK_MASK		HDSP_STATUS2_CLOCK(0x07);
 
-/* TODO: Lock and sync bits are read from status / status2 register. */
-
 struct hdsp_clock_source {
-	char		*name;
-	uint32_t	control;
-	uint32_t	status2;
+	char			*name;
 	enum hdsp_clock_type	type;
 };
 
