@@ -45,8 +45,8 @@
 
 /* Buffer */
 /* TODO: These are probably set in buffer address registers. */
-#define	HDSP_PAGE_ADDR_BUF_OUT		8192
-#define	HDSP_PAGE_ADDR_BUF_IN		(HDSP_PAGE_ADDR_BUF_OUT + 64 * 16 * 4)
+#define	HDSP_PAGE_ADDR_BUF_OUT		32
+#define	HDSP_PAGE_ADDR_BUF_IN		36
 #define	HDSP_BUF_POSITION_MASK		0x000FFC0
 
 /* Frequency */

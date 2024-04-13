@@ -224,17 +224,20 @@ static void
 hdsp_map_dmabuf(struct sc_info *sc)
 {
 	uint32_t paddr, raddr;
-	int i;
+	/*int i;*/
 
 	paddr = vtophys(sc->pbuf);
 	raddr = vtophys(sc->rbuf);
 
-	for (i = 0; i < HDSP_MAX_SLOTS * 16; i++) {
+	hdsp_write_4(sc, HDSP_PAGE_ADDR_BUF_OUT, paddr);
+	hdsp_write_4(sc, HDSP_PAGE_ADDR_BUF_IN, raddr);
+
+	/*for (i = 0; i < HDSP_MAX_SLOTS * 16; i++) {
 		hdsp_write_4(sc, HDSP_PAGE_ADDR_BUF_OUT + 4 * i,
                     paddr + i * 4096);
 		hdsp_write_4(sc, HDSP_PAGE_ADDR_BUF_IN + 4 * i,
                     raddr + i * 4096);
-	}
+	}*/
 }
 
 static int
