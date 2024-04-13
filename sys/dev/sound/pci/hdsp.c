@@ -259,7 +259,8 @@ hdsp_sysctl_sample_rate(SYSCTL_HANDLER_ARGS)
 	if (speed > 0) {
 		multiplier = 1;
 		if (speed > (96000 + 128000) / 2)
-			multiplier = 4;
+			/* TODO: Allow quad speed sample rates for HDSP 9632. */
+			multiplier = /* 4 */ 2;
 		else if (speed > (48000 + 64000) / 2)
 			multiplier = 2;
 

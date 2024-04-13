@@ -74,9 +74,10 @@ static struct hdsp_rate rate_map[] = {
 	{  64000, (HDSP_FREQ_32000 | HDSP_FREQ_DOUBLE) },
 	{  88200, (HDSP_FREQ_44100 | HDSP_FREQ_DOUBLE) },
 	{  96000, (HDSP_FREQ_48000 | HDSP_FREQ_DOUBLE) },
-	{ 128000, (HDSP_FREQ_32000 | HDSP_FREQ_QUAD)   },
+	/* TODO: Allow quad speed sample rates for HDSP 9632. */
+	/*{ 128000, (HDSP_FREQ_32000 | HDSP_FREQ_QUAD)   },
 	{ 176400, (HDSP_FREQ_44100 | HDSP_FREQ_QUAD)   },
-	{ 192000, (HDSP_FREQ_48000 | HDSP_FREQ_QUAD)   },
+	{ 192000, (HDSP_FREQ_48000 | HDSP_FREQ_QUAD)   },*/
 
 	{ 0, 0 },
 };
@@ -672,7 +673,8 @@ hdspchan_init(kobj_t obj, void *devinfo, struct snd_dbuf *b,
 	    SND_FORMAT(AFMT_S32_LE, hdsp_channel_count(ch->ports, 8), 0);
 	ch->cap_fmts[3] = 0;
 	ch->caps = malloc(sizeof(struct pcmchan_caps), M_HDSP, M_NOWAIT);
-	*(ch->caps) = (struct pcmchan_caps) {32000, 192000, ch->cap_fmts, 0};
+	/* TODO: Allow quad speed sample rates for HDSP 9632. */
+	*(ch->caps) = (struct pcmchan_caps) {32000, 96000, ch->cap_fmts, 0};
 
 	/* Allocate maximum buffer size. */
 	ch->size = HDSP_CHANBUF_SIZE * hdsp_channel_count(ch->ports, 8);
@@ -954,7 +956,8 @@ static uint32_t hdsp_bkp_fmt[] = {
 	0
 };
 
-static struct pcmchan_caps hdsp_bkp_caps = {32000, 192000, hdsp_bkp_fmt, 0};
+/* TODO: Allow quad speed sample rates for HDSP 9632. */
+static struct pcmchan_caps hdsp_bkp_caps = {32000, 96000, hdsp_bkp_fmt, 0};
 
 static struct pcmchan_caps *
 hdspchan_getcaps(kobj_t obj, void *data)
