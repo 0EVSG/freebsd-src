@@ -855,7 +855,7 @@ hdspchan_setspeed(kobj_t obj, void *data, uint32_t speed)
 	switch (sc->type) {
 	case HDSP_9652:
 	case HDSP_9632:
-		period = HDSP_FREQ_AIO;
+		period = HDSP_FREQ_9632;
 		break;
 	default:
 		/* Unsupported card. */
@@ -1036,9 +1036,9 @@ hdsp_pcm_attach(device_t dev)
 	scp->ih = &hdsp_pcm_intr;
 
 	if (scp->hc->ports & HDSP_CHAN_9632_ALL)
-		buf = "AIO";
+		buf = "9632";
 	else if (scp->hc->ports & HDSP_CHAN_9652_ALL)
-		buf = "RayDAT";
+		buf = "9652";
 	else
 		buf = "?";
 	device_set_descf(dev, "HDSP %s [%s]", buf, scp->hc->descr);

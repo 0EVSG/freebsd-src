@@ -29,7 +29,7 @@
 
 /*
  * RME HDSP driver for FreeBSD.
- * Supported cards: AIO, RayDAT.
+ * Supported cards: HDSP 9632, HDSP 9652.
  */
 
 #include <sys/types.h>
@@ -572,11 +572,11 @@ hdsp_probe(device_t dev)
 	    pci_get_device(dev) == PCI_DEVICE_XILINX_HDSP) {
 		rev = pci_get_revid(dev);
 		switch (rev) {
-		case PCI_REVISION_AIO:
-			device_set_desc(dev, "RME HDSP AIO");
+		case PCI_REVISION_9632:
+			device_set_desc(dev, "RME HDSP 9632");
 			return (0);
-		case PCI_REVISION_RAYDAT:
-			device_set_desc(dev, "RME HDSP RayDAT");
+		case PCI_REVISION_9652:
+			device_set_desc(dev, "RME HDSP 9652");
 			return (0);
 		}
 	}
@@ -615,7 +615,7 @@ hdsp_init(struct sc_info *sc)
 	switch (sc->type) {
 	case HDSP_9652:
 	case HDSP_9632:
-		period = HDSP_FREQ_AIO;
+		period = HDSP_FREQ_9632;
 		break;
 	default:
 		return (ENXIO);
@@ -653,11 +653,11 @@ hdsp_attach(device_t dev)
 	pci_enable_busmaster(dev);
 	rev = pci_get_revid(dev);
 	switch (rev) {
-	case PCI_REVISION_AIO:
+	case PCI_REVISION_9632:
 		sc->type = HDSP_9632;
 		chan_map = hdsp_unified_pcm ? chan_map_9632_uni : chan_map_9632;
 		break;
-	case PCI_REVISION_RAYDAT:
+	case PCI_REVISION_9652:
 		sc->type = HDSP_9652;
 		chan_map = hdsp_unified_pcm ? chan_map_9652_uni : chan_map_9652;
 		break;
