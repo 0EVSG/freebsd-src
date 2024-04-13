@@ -155,6 +155,16 @@ struct hdsp_channel {
 	char		*descr;
 };
 
+enum hdsp_clock_type {
+	HDSP_CLOCK_INTERNAL,
+	HDSP_CLOCK_ADAT1,
+	HDSP_CLOCK_ADAT2,
+	HDSP_CLOCK_ADAT3,
+	HDSP_CLOCK_SPDIF,
+	HDSP_CLOCK_WORD,
+	HDSP_CLOCK_ADAT_SYNC
+};
+
 /* Preferred clock source. */
 #define	HDSP_CONTROL_MASTER		(1 << 4)
 #define HDSP_CONTROL_CLOCK_MASK		(HDSP_CONTROL_MASTER | (1 << 13) | \
@@ -171,8 +181,7 @@ struct hdsp_clock_source {
 	char		*name;
 	uint32_t	control;
 	uint32_t	status2;
-	uint32_t	lock_bit;
-	uint32_t	sync_bit;
+	enum hdsp_clock_type	type;
 };
 
 static MALLOC_DEFINE(M_HDSP, "hdsp", "hdsp audio");

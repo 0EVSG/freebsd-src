@@ -53,23 +53,23 @@ SYSCTL_BOOL(_hw_hdsp, OID_AUTO, unified_pcm, CTLFLAG_RWTUN,
     &hdsp_unified_pcm, 0, "Combine physical ports in one unified pcm device");
 
 static struct hdsp_clock_source hdsp_clock_source_table_9652[] = {
-	{ "internal",    HDSP_CONTROL_MASTER, HDSP_STATUS2_CLOCK(0),       0,       0 },
-	{ "adat1",     HDSP_CONTROL_CLOCK(0), HDSP_STATUS2_CLOCK(0),  1 << 2, 1 << 10 },
-	{ "adat2",     HDSP_CONTROL_CLOCK(1), HDSP_STATUS2_CLOCK(1),  1 << 3, 1 << 11 },
-	{ "adat3",     HDSP_CONTROL_CLOCK(2), HDSP_STATUS2_CLOCK(2),  1 << 4, 1 << 12 },
-	{ "spdif",     HDSP_CONTROL_CLOCK(3), HDSP_STATUS2_CLOCK(3),  1 << 1,  1 << 9 },
-	{ "word",      HDSP_CONTROL_CLOCK(4), HDSP_STATUS2_CLOCK(4), 1 << 24, 1 << 25 },
-	{ "adat_sync", HDSP_CONTROL_CLOCK(5), HDSP_STATUS2_CLOCK(5),       0,       0 },
-	{ NULL,                            0,                     0,       0,       0 },
+	{ "internal",    HDSP_CONTROL_MASTER, HDSP_STATUS2_CLOCK(0), HDSP_CLOCK_INTERNAL },
+	{ "adat1",     HDSP_CONTROL_CLOCK(0), HDSP_STATUS2_CLOCK(0), HDSP_CLOCK_ADAT1 },
+	{ "adat2",     HDSP_CONTROL_CLOCK(1), HDSP_STATUS2_CLOCK(1), HDSP_CLOCK_ADAT2 },
+	{ "adat3",     HDSP_CONTROL_CLOCK(2), HDSP_STATUS2_CLOCK(2), HDSP_CLOCK_ADAT3 },
+	{ "spdif",     HDSP_CONTROL_CLOCK(3), HDSP_STATUS2_CLOCK(3), HDSP_CLOCK_SPDIF },
+	{ "word",      HDSP_CONTROL_CLOCK(4), HDSP_STATUS2_CLOCK(4), HDSP_CLOCK_WORD },
+	{ "adat_sync", HDSP_CONTROL_CLOCK(5), HDSP_STATUS2_CLOCK(5), HDSP_CLOCK_ADAT_SYNC },
+	{ NULL,                            0,                     0, HDSP_CLOCK_INTERNAL }
 };
 
 /* TODO: Verify available clock sources for 9632. */
 static struct hdsp_clock_source hdsp_clock_source_table_9632[] = {
-	{ "internal",    HDSP_CONTROL_MASTER, HDSP_STATUS2_CLOCK(0),       0,       0 },
-	{ "adat",      HDSP_CONTROL_CLOCK(0), HDSP_STATUS2_CLOCK(0),  1 << 2, 1 << 10 },
-	{ "spdif",     HDSP_CONTROL_CLOCK(3), HDSP_STATUS2_CLOCK(3),  1 << 1,  1 << 9 },
-	{ "word",      HDSP_CONTROL_CLOCK(4), HDSP_STATUS2_CLOCK(4), 1 << 24, 1 << 25 },
-	{ NULL,                            0,                     0,       0,       0 },
+	{ "internal",    HDSP_CONTROL_MASTER, HDSP_STATUS2_CLOCK(0), HDSP_CLOCK_INTERNAL },
+	{ "adat",      HDSP_CONTROL_CLOCK(0), HDSP_STATUS2_CLOCK(0), HDSP_CLOCK_ADAT1 },
+	{ "spdif",     HDSP_CONTROL_CLOCK(3), HDSP_STATUS2_CLOCK(3), HDSP_CLOCK_SPDIF },
+	{ "word",      HDSP_CONTROL_CLOCK(4), HDSP_STATUS2_CLOCK(4), HDSP_CLOCK_WORD },
+	{ NULL,                            0,                     0, HDSP_CLOCK_INTERNAL }
 };
 
 static struct hdsp_channel chan_map_aio[] = {
@@ -421,6 +421,54 @@ hdsp_sysctl_clock_list(SYSCTL_HANDLER_ARGS)
 	return (sysctl_handle_string(oidp, buf, sizeof(buf), req));
 }
 
+static bool
+hdsp_clock_source_locked(enum hdsp_clock_type type, uint32_t status,
+    uint32_t status2)
+{
+	switch (type) {
+	case HDSP_CLOCK_INTERNAL:
+		return (true);
+	case HDSP_CLOCK_ADAT1:
+		return ((status >> 3) & 0x01);
+	case HDSP_CLOCK_ADAT2:
+		return ((status >> 2) & 0x01);
+	case HDSP_CLOCK_ADAT3:
+		return ((status >> 1) & 0x01);
+	case HDSP_CLOCK_SPDIF:
+		return (!((status >> 25) & 0x01));
+	case HDSP_CLOCK_WORD:
+		return ((status2 >> 3) & 0x01);
+	case HDSP_CLOCK_ADAT_SYNC:
+		return ((status >> 5) & 0x01);
+	default:
+		return (false);
+	}
+}
+
+static bool
+hdsp_clock_source_synced(enum hdsp_clock_type type, uint32_t status,
+    uint32_t status2)
+{
+	switch (type) {
+	case HDSP_CLOCK_INTERNAL:
+		return (true);
+	case HDSP_CLOCK_ADAT1:
+		return ((status >> 18) & 0x01);
+	case HDSP_CLOCK_ADAT2:
+		return ((status >> 17) & 0x01);
+	case HDSP_CLOCK_ADAT3:
+		return ((status >> 16) & 0x01);
+	case HDSP_CLOCK_SPDIF:
+		return (((status >> 4) & 0x01) && !((status >> 25) & 0x01));
+	case HDSP_CLOCK_WORD:
+		return ((status2 >> 4) & 0x01);
+	case HDSP_CLOCK_ADAT_SYNC:
+		return ((status >> 27) & 0x01);
+	default:
+		return (false);
+	}
+}
+
 static int
 hdsp_sysctl_sync_status(SYSCTL_HANDLER_ARGS)
 {
@@ -429,7 +477,7 @@ hdsp_sysctl_sync_status(SYSCTL_HANDLER_ARGS)
 	char buf[256];
 	char *state;
 	int n;
-	uint32_t status;
+	uint32_t status, status2;
 
 	sc = oidp->oid_arg1;
 	n = 0;
@@ -442,24 +490,28 @@ hdsp_sysctl_sync_status(SYSCTL_HANDLER_ARGS)
 	else
 		return (ENXIO);
 
-	/* Read current lock and sync bits from status register. */
+	/* Read current lock and sync bits from status registers. */
 	snd_mtxlock(sc->lock);
 	status = hdsp_read_4(sc, HDSP_STATUS1_REG);
+	status2 = hdsp_read_4(sc, HDSP_STATUS2_REG);
 	snd_mtxunlock(sc->lock);
 
 	/* List clock sources with lock and sync state. */
 	for (clock = clock_table; clock->name != NULL; ++clock) {
-		if (clock->sync_bit != 0) {
-			if (n > 0)
-				n += strlcpy(buf + n, ",", sizeof(buf) - n);
-			state = "none";
-			if ((clock->sync_bit & status) != 0)
+		if (clock->type == HDSP_CLOCK_INTERNAL)
+			continue;
+		if (n > 0)
+			n += strlcpy(buf + n, ",", sizeof(buf) - n);
+		state = "none";
+		if (hdsp_clock_source_locked(clock->type, status, status2)) {
+			if (hdsp_clock_source_synced(clock->type, status,
+			    status2))
 				state = "sync";
-			else if ((clock->lock_bit & status) != 0)
+			else
 				state = "lock";
-			n += snprintf(buf + n, sizeof(buf) - n, "%s(%s)",
-			    clock->name, state);
 		}
+		n += snprintf(buf + n, sizeof(buf) - n, "%s(%s)",
+		    clock->name, state);
 	}
 	return (sysctl_handle_string(oidp, buf, sizeof(buf), req));
 }
