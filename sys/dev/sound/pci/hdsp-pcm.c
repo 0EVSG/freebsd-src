@@ -29,7 +29,7 @@
 
 /*
  * RME HDSP driver for FreeBSD (pcm-part).
- * Supported cards: AIO, RayDAT.
+ * Supported cards: HDSP 9632, HDSP 9652.
  */
 
 #include <dev/sound/pcm/sound.h>
@@ -84,13 +84,13 @@ static struct hdsp_rate rate_map[] = {
 static uint32_t
 hdsp_channel_play_ports(struct hdsp_channel *hc)
 {
-	return (hc->ports & (HDSP_CHAN_AIO_ALL | HDSP_CHAN_RAY_ALL));
+	return (hc->ports & (HDSP_CHAN_9632_ALL | HDSP_CHAN_9652_ALL));
 }
 
 static uint32_t
 hdsp_channel_rec_ports(struct hdsp_channel *hc)
 {
-	return (hc->ports & (HDSP_CHAN_AIO_ALL_REC | HDSP_CHAN_RAY_ALL));
+	return (hc->ports & (HDSP_CHAN_9632_ALL | HDSP_CHAN_9652_ALL));
 }
 
 static unsigned int
@@ -115,12 +115,14 @@ hdsp_port_first_row(uint32_t ports)
 	uint32_t ends;
 
 	/* Restrict ports to one set with contiguous slots. */
-	if (ports & HDSP_CHAN_AIO_LINE)
-		ports = HDSP_CHAN_AIO_LINE;	/* Gap in the AIO slots here. */
-	else if (ports & HDSP_CHAN_AIO_ALL)
-		ports &= HDSP_CHAN_AIO_ALL;	/* Rest of the AIO slots. */
-	else if (ports & HDSP_CHAN_RAY_ALL)
-		ports &= HDSP_CHAN_RAY_ALL;	/* All RayDAT slots. */
+	if (ports & HDSP_CHAN_9632_ADAT)
+		ports = HDSP_CHAN_9632_ADAT;
+	else if (ports & HDSP_CHAN_9632_ALL)	/* Gap after ADAT for 96kHz. */
+		ports &= HDSP_CHAN_9632_ALL;
+	else if (ports & HDSP_CHAN_9652_ADAT_ALL)
+		ports &= HDSP_CHAN_9652_ADAT_ALL;
+	else if (ports & HDSP_CHAN_9652_SPDIF)	/* Gap after ADAT for 96kHz. */
+		ports &= HDSP_CHAN_9652_SPDIF;
 
 	/* Ends of port rows are followed by a port which is not in the set. */
 	ends = ports & (~(ports >> 1));
@@ -133,32 +135,24 @@ hdsp_channel_count(uint32_t ports, uint32_t adat_width)
 {
 	unsigned int count = 0;
 
-	if (ports & HDSP_CHAN_AIO_ALL) {
-		/* AIO ports. */
-		if (ports & HDSP_CHAN_AIO_LINE)
-			count += 2;
-		if (ports & HDSP_CHAN_AIO_PHONE)
-			count += 2;
-		if (ports & HDSP_CHAN_AIO_AES)
-			count += 2;
-		if (ports & HDSP_CHAN_AIO_SPDIF)
-			count += 2;
-		if (ports & HDSP_CHAN_AIO_ADAT)
+	if (ports & HDSP_CHAN_9632_ALL) {
+		/* HDSP 9632 ports. */
+		if (ports & HDSP_CHAN_9632_ADAT)
 			count += adat_width;
-	} else if (ports & HDSP_CHAN_RAY_ALL) {
-		/* RayDAT ports. */
-		if (ports & HDSP_CHAN_RAY_AES)
+		if (ports & HDSP_CHAN_9632_SPDIF)
 			count += 2;
-		if (ports & HDSP_CHAN_RAY_SPDIF)
+		if (ports & HDSP_CHAN_9632_LINE)
 			count += 2;
-		if (ports & HDSP_CHAN_RAY_ADAT1)
+	} else if (ports & HDSP_CHAN_9652_ALL) {
+		/* HDSP 9652 ports. */
+		if (ports & HDSP_CHAN_9652_ADAT1)
 			count += adat_width;
-		if (ports & HDSP_CHAN_RAY_ADAT2)
+		if (ports & HDSP_CHAN_9652_ADAT2)
 			count += adat_width;
-		if (ports & HDSP_CHAN_RAY_ADAT3)
+		if (ports & HDSP_CHAN_9652_ADAT3)
 			count += adat_width;
-		if (ports & HDSP_CHAN_RAY_ADAT4)
-			count += adat_width;
+		if (ports & HDSP_CHAN_9652_SPDIF)
+			count += 2;
 	}
 
 	return (count);
@@ -174,10 +168,10 @@ hdsp_channel_offset(uint32_t subset, uint32_t ports, unsigned int adat_width)
 	/* Include all ports preceding the first one of the subset. */
 	preceding = ports & (~subset & (subset - 1));
 
-	if (preceding & HDSP_CHAN_AIO_ALL)
-		preceding &= HDSP_CHAN_AIO_ALL;	/* Contiguous AIO slots. */
-	else if (preceding & HDSP_CHAN_RAY_ALL)
-		preceding &= HDSP_CHAN_RAY_ALL;	/* Contiguous RayDAT slots. */
+	if (preceding & HDSP_CHAN_9632_ALL)
+		preceding &= HDSP_CHAN_9632_ALL;	/* Contiguous 9632 slots. */
+	else if (preceding & HDSP_CHAN_9652_ALL)
+		preceding &= HDSP_CHAN_9652_ALL;	/* Contiguous 9652 slots. */
 
 	return (hdsp_channel_count(preceding, adat_width));
 }
@@ -187,31 +181,23 @@ hdsp_port_slot_offset(uint32_t port, unsigned int adat_width)
 {
 	/* Exctract the first port (lowest bit) if set of ports. */
 	switch (hdsp_port_first(port)) {
-	/* AIO ports */
-	case HDSP_CHAN_AIO_LINE:
+	/* HDSP 9632 ports */
+	case HDSP_CHAN_9632_ADAT:
 		return (0);
-	case HDSP_CHAN_AIO_PHONE:
-		return (6);
-	case HDSP_CHAN_AIO_AES:
+	case HDSP_CHAN_9632_SPDIF:
 		return (8);
-	case HDSP_CHAN_AIO_SPDIF:
+	case HDSP_CHAN_9632_LINE:
 		return (10);
-	case HDSP_CHAN_AIO_ADAT:
-		return (12);
 
-	/* RayDAT ports */
-	case HDSP_CHAN_RAY_AES:
+	/* HDSP 9652 ports */
+	case HDSP_CHAN_9652_ADAT1:
 		return (0);
-	case HDSP_CHAN_RAY_SPDIF:
-		return (2);
-	case HDSP_CHAN_RAY_ADAT1:
-		return (4);
-	case HDSP_CHAN_RAY_ADAT2:
-		return (4 + adat_width);
-	case HDSP_CHAN_RAY_ADAT3:
-		return (4 + 2 * adat_width);
-	case HDSP_CHAN_RAY_ADAT4:
-		return (4 + 3 * adat_width);
+	case HDSP_CHAN_9652_ADAT2:
+		return (adat_width);
+	case HDSP_CHAN_9652_ADAT3:
+		return (2 * adat_width);
+	case HDSP_CHAN_9652_SPDIF:
+		return (24);
 	default:
 		return (0);
 	}
@@ -1044,9 +1030,9 @@ hdsp_pcm_attach(device_t dev)
 	scp = device_get_ivars(dev);
 	scp->ih = &hdsp_pcm_intr;
 
-	if (scp->hc->ports & HDSP_CHAN_AIO_ALL)
+	if (scp->hc->ports & HDSP_CHAN_9632_ALL)
 		buf = "AIO";
-	else if (scp->hc->ports & HDSP_CHAN_RAY_ALL)
+	else if (scp->hc->ports & HDSP_CHAN_9652_ALL)
 		buf = "RayDAT";
 	else
 		buf = "?";

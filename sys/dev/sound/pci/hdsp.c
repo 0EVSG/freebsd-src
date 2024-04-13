@@ -52,6 +52,15 @@ static SYSCTL_NODE(_hw, OID_AUTO, hdsp, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
 SYSCTL_BOOL(_hw_hdsp, OID_AUTO, unified_pcm, CTLFLAG_RWTUN,
     &hdsp_unified_pcm, 0, "Combine physical ports in one unified pcm device");
 
+/* TODO: Verify available clock sources for 9632. */
+static struct hdsp_clock_source hdsp_clock_source_table_9632[] = {
+	{ "internal", HDSP_CLOCK_INTERNAL },
+	{ "adat",     HDSP_CLOCK_ADAT1    },
+	{ "spdif",    HDSP_CLOCK_SPDIF    },
+	{ "word",     HDSP_CLOCK_WORD     },
+	{ NULL,       HDSP_CLOCK_INTERNAL }
+};
+
 static struct hdsp_clock_source hdsp_clock_source_table_9652[] = {
 	{ "internal",  HDSP_CLOCK_INTERNAL  },
 	{ "adat1",     HDSP_CLOCK_ADAT1     },
@@ -63,41 +72,28 @@ static struct hdsp_clock_source hdsp_clock_source_table_9652[] = {
 	{ NULL,        HDSP_CLOCK_INTERNAL  }
 };
 
-/* TODO: Verify available clock sources for 9632. */
-static struct hdsp_clock_source hdsp_clock_source_table_9632[] = {
-	{ "internal", HDSP_CLOCK_INTERNAL },
-	{ "adat",     HDSP_CLOCK_ADAT1    },
-	{ "spdif",    HDSP_CLOCK_SPDIF    },
-	{ "word",     HDSP_CLOCK_WORD     },
-	{ NULL,       HDSP_CLOCK_INTERNAL }
-};
-
-static struct hdsp_channel chan_map_aio[] = {
-	{ HDSP_CHAN_AIO_LINE,    "line" },
-	{ HDSP_CHAN_AIO_PHONE,  "phone" },
-	{ HDSP_CHAN_AIO_AES,      "aes" },
-	{ HDSP_CHAN_AIO_SPDIF, "s/pdif" },
-	{ HDSP_CHAN_AIO_ADAT,    "adat" },
+static struct hdsp_channel chan_map_9632[] = {
+	{ HDSP_CHAN_9632_ADAT,    "adat" },
+	{ HDSP_CHAN_9632_SPDIF, "s/pdif" },
+	{ HDSP_CHAN_9632_LINE,    "line" },
 	{ 0,                        NULL },
 };
 
-static struct hdsp_channel chan_map_aio_uni[] = {
-	{ HDSP_CHAN_AIO_ALL, "all" },
+static struct hdsp_channel chan_map_9632_uni[] = {
+	{ HDSP_CHAN_9632_ALL, "all" },
 	{ 0,                   NULL },
 };
 
-static struct hdsp_channel chan_map_rd[] = {
-	{ HDSP_CHAN_RAY_AES,      "aes" },
-	{ HDSP_CHAN_RAY_SPDIF, "s/pdif" },
-	{ HDSP_CHAN_RAY_ADAT1,  "adat1" },
-	{ HDSP_CHAN_RAY_ADAT2,  "adat2" },
-	{ HDSP_CHAN_RAY_ADAT3,  "adat3" },
-	{ HDSP_CHAN_RAY_ADAT4,  "adat4" },
+static struct hdsp_channel chan_map_9652[] = {
+	{ HDSP_CHAN_9652_ADAT1,  "adat1" },
+	{ HDSP_CHAN_9652_ADAT2,  "adat2" },
+	{ HDSP_CHAN_9652_ADAT3,  "adat3" },
+	{ HDSP_CHAN_9652_SPDIF, "s/pdif" },
 	{ 0,                        NULL },
 };
 
-static struct hdsp_channel chan_map_rd_uni[] = {
-	{ HDSP_CHAN_RAY_ALL, "all" },
+static struct hdsp_channel chan_map_9652_uni[] = {
+	{ HDSP_CHAN_9652_ALL, "all" },
 	{ 0,                   NULL },
 };
 
@@ -655,11 +651,11 @@ hdsp_attach(device_t dev)
 	switch (rev) {
 	case PCI_REVISION_AIO:
 		sc->type = HDSP_9632;
-		chan_map = hdsp_unified_pcm ? chan_map_aio_uni : chan_map_aio;
+		chan_map = hdsp_unified_pcm ? chan_map_9632_uni : chan_map_9632;
 		break;
 	case PCI_REVISION_RAYDAT:
 		sc->type = HDSP_9652;
-		chan_map = hdsp_unified_pcm ? chan_map_rd_uni : chan_map_rd;
+		chan_map = hdsp_unified_pcm ? chan_map_9652_uni : chan_map_9652;
 		break;
 	default:
 		return (ENXIO);

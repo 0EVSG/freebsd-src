@@ -123,32 +123,22 @@
 #define	HDSP_CHANBUF_SIZE		(4 * HDSP_CHANBUF_SAMPLES)
 #define	HDSP_DMASEGSIZE			(HDSP_CHANBUF_SIZE * HDSP_MAX_SLOTS)
 
-/* TODO: Channel mapping for HDSP 9632. */
-#define	HDSP_CHAN_AIO_LINE		(1 << 0)
-#define	HDSP_CHAN_AIO_PHONE		(1 << 1)
-#define	HDSP_CHAN_AIO_AES		(1 << 2)
-#define	HDSP_CHAN_AIO_SPDIF		(1 << 3)
-#define	HDSP_CHAN_AIO_ADAT		(1 << 4)
-#define	HDSP_CHAN_AIO_ALL_REC		(HDSP_CHAN_AIO_LINE | \
-					HDSP_CHAN_AIO_AES | \
-					HDSP_CHAN_AIO_SPDIF | \
-					HDSP_CHAN_AIO_ADAT)
-#define	HDSP_CHAN_AIO_ALL		(HDSP_CHAN_AIO_ALL_REC | \
-					HDSP_CHAN_AIO_PHONE) \
+#define	HDSP_CHAN_9632_ADAT		(1 << 0)
+#define	HDSP_CHAN_9632_SPDIF		(1 << 1)
+#define	HDSP_CHAN_9632_LINE		(1 << 2)
+#define	HDSP_CHAN_9632_ALL		(HDSP_CHAN_9632_ADAT | \
+					HDSP_CHAN_9632_SPDIF | \
+					HDSP_CHAN_9632_LINE)
 
-/* TODO: Channel mapping for HDSP 9652. */
-#define	HDSP_CHAN_RAY_AES		(1 << 5)
-#define	HDSP_CHAN_RAY_SPDIF		(1 << 6)
-#define	HDSP_CHAN_RAY_ADAT1		(1 << 7)
-#define	HDSP_CHAN_RAY_ADAT2		(1 << 8)
-#define	HDSP_CHAN_RAY_ADAT3		(1 << 9)
-#define	HDSP_CHAN_RAY_ADAT4		(1 << 10)
-#define	HDSP_CHAN_RAY_ALL		(HDSP_CHAN_RAY_AES | \
-					HDSP_CHAN_RAY_SPDIF | \
-					HDSP_CHAN_RAY_ADAT1 | \
-					HDSP_CHAN_RAY_ADAT2 | \
-					HDSP_CHAN_RAY_ADAT3 | \
-					HDSP_CHAN_RAY_ADAT4)
+#define	HDSP_CHAN_9652_ADAT1		(1 << 5)
+#define	HDSP_CHAN_9652_ADAT2		(1 << 6)
+#define	HDSP_CHAN_9652_ADAT3		(1 << 7)
+#define	HDSP_CHAN_9652_ADAT_ALL		(HDSP_CHAN_9652_ADAT1 | \
+					HDSP_CHAN_9652_ADAT2 | \
+					HDSP_CHAN_9652_ADAT3)
+#define	HDSP_CHAN_9652_SPDIF		(1 << 8)
+#define	HDSP_CHAN_9652_ALL		(HDSP_CHAN_9652_ADAT_ALL | \
+					HDSP_CHAN_9652_SPDIF)
 
 struct hdsp_channel {
 	uint32_t	ports;
