@@ -293,7 +293,8 @@ hdsp_sysctl_period(SYSCTL_HANDLER_ARGS)
 	/* Period is from 2^5 to 2^14, 0 falls back to pcm latency settings. */
 	sc->force_period = 0;
 	if (period > 0) {
-		sc->force_period = 32;
+		/* TODO: Allow period of 32 for HDSP 9652. */
+		sc->force_period = 64;
 		while (sc->force_period < period && sc->force_period < 4096)
 			sc->force_period <<= 1;
 	}
@@ -590,7 +591,7 @@ hdsp_init(struct sc_info *sc)
 	long long period;
 
 	/* Set latency. */
-	sc->period = 32;
+	sc->period = 256;
 	/*
 	 * The pcm channel latency settings propagate unreliable blocksizes,
 	 * different for recording and playback, and skewed due to rounding
@@ -598,7 +599,7 @@ hdsp_init(struct sc_info *sc)
 	 * Force period to a consistent default until these issues are fixed.
 	 */
 	sc->force_period = 256;
-	sc->ctrl_register = hdsp_encode_latency(7);
+	sc->ctrl_register = hdsp_encode_latency(2);
 
 	/* Set rate. */
 	sc->speed = HDSP_SPEED_DEFAULT;
