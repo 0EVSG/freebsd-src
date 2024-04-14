@@ -540,7 +540,7 @@ hdsp_sysctl_sync_status(SYSCTL_HANDLER_ARGS)
 
 	/* Read current lock and sync bits from status registers. */
 	snd_mtxlock(sc->lock);
-	status = hdsp_read_4(sc, HDSP_STATUS1_REG);
+	status = hdsp_read_4(sc, HDSP_STATUS_REG);
 	status2 = hdsp_read_4(sc, HDSP_STATUS2_REG);
 	snd_mtxunlock(sc->lock);
 

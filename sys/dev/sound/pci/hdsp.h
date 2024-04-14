@@ -103,8 +103,6 @@
 /* TODO: Out buffer address register (32) and in buffer address register (36) */
 #define	HDSP_CONTROL_REG		64
 #define	HDSP_STATUS_REG			0
-/* TODO: No status1 register, selected autosync ref in status2! */
-#define	HDSP_STATUS1_REG		64
 #define	HDSP_STATUS2_REG		192
 #define	HDSP_ENABLE			(1 << 0)
 
