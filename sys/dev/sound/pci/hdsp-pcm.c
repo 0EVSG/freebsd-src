@@ -355,6 +355,12 @@ hdspchan_enable(struct sc_chinfo *ch, int value)
 
 	ch->run = value;
 
+	device_printf(sc->dev, "%d channels at %d -> %d slots at %d.\n",
+	    hdsp_channel_count(ch->ports, hdsp_adat_width(sc->speed)),
+	    hdsp_channel_offset(ch->ports, ch->ports, hdsp_adat_width(sc->speed)),
+	    hdsp_port_slot_width(ch->ports, hdsp_adat_width(sc->speed)),
+	    hdsp_port_slot_offset(ch->ports, hdsp_adat_width(sc->speed)));
+
 	/* Iterate through rows of ports with contiguous slots. */
 	ports = ch->ports;
 	row = hdsp_port_first_row(ports);
