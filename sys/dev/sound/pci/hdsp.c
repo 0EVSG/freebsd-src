@@ -613,6 +613,11 @@ hdsp_init(struct sc_info *sc)
 
 	hdsp_write_4(sc, HDSP_CONTROL_REG, sc->ctrl_register);
 
+	if (sc->type == HDSP_9652)
+		hdsp_write_4(sc, HDSP_CONTROL2_REG, HDSP_CONTROL2_9652_MIXER);
+	else
+		hdsp_write_4(sc, HDSP_CONTROL2_REG, 0);
+
 	switch (sc->type) {
 	case HDSP_9652:
 	case HDSP_9632:

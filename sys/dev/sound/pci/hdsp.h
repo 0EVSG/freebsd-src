@@ -42,6 +42,7 @@
 /* TODO: Mixer base is probably 4096... */
 #define	HDSP_MIXER_BASE		32768
 #define	HDSP_MAX_GAIN			32768
+#define	HDSP_CONTROL2_9652_MIXER	(1 << 11)
 
 /* Buffer */
 /* TODO: These are probably set in buffer address registers. */
@@ -103,6 +104,7 @@
 /* TODO: Out buffer address register (32) and in buffer address register (36) */
 #define	HDSP_RESET_POINTER		0
 #define	HDSP_CONTROL_REG		64
+#define	HDSP_CONTROL2_REG		256
 #define	HDSP_STATUS_REG			0
 #define	HDSP_STATUS2_REG		192
 #define	HDSP_ENABLE			(1 << 0)
