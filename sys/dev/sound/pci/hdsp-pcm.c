@@ -955,6 +955,9 @@ hdspchan_setblocksize(kobj_t obj, void *data, uint32_t blocksize)
 	sndbuf_resize(ch->buffer,
 	    (HDSP_CHANBUF_SIZE * AFMT_CHANNEL(ch->format)) / (sc->period * 4),
 	    (sc->period * 4));
+
+	/* TODO: Rewrite frequency (same register) for 9632. */
+	hdsp_write_4(sc, HDSP_RESET_POINTER, 0);
 end:
 
 	return (sndbuf_getblksz(ch->buffer));

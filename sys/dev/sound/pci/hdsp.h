@@ -101,6 +101,7 @@
 
 /* Settings */
 /* TODO: Out buffer address register (32) and in buffer address register (36) */
+#define	HDSP_RESET_POINTER		0
 #define	HDSP_CONTROL_REG		64
 #define	HDSP_STATUS_REG			0
 #define	HDSP_STATUS2_REG		192

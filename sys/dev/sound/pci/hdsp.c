@@ -627,7 +627,7 @@ hdsp_init(struct sc_info *sc)
 		period /= sc->speed;
 		hdsp_write_4(sc, HDSP_FREQ_REG, period);
 	} else {
-		hdsp_write_4(sc, HDSP_FREQ_REG, 0);
+		hdsp_write_4(sc, HDSP_RESET_POINTER, 0);
 	}
 
 	return (0);
