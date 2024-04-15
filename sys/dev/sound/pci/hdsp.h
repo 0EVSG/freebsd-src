@@ -107,7 +107,10 @@
 #define	HDSP_CONTROL2_REG		256
 #define	HDSP_STATUS_REG			0
 #define	HDSP_STATUS2_REG		192
+
 #define	HDSP_ENABLE			(1 << 0)
+#define	HDSP_CONTROL_SPDIF_COAX		(1 << 14)
+#define	HDSP_CONTROL_LINE_OUT		(1 << 24)
 
 /* Interrupts */
 #define	HDSP_AUDIO_IRQ_PENDING		(1 << 0)

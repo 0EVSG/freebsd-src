@@ -611,6 +611,12 @@ hdsp_init(struct sc_info *sc)
 	sc->ctrl_register &= ~HDSP_CONTROL_CLOCK_MASK;
 	sc->ctrl_register |= HDSP_CONTROL_MASTER;
 
+	/* SPDIF from coax in, line out. */
+	sc->ctrl_register &= ~HDSP_CONTROL_SPDIF_COAX;
+	sc->ctrl_register |= HDSP_CONTROL_SPDIF_COAX;
+	sc->ctrl_register &= ~HDSP_CONTROL_LINE_OUT;
+	sc->ctrl_register |= HDSP_CONTROL_LINE_OUT;
+
 	hdsp_write_4(sc, HDSP_CONTROL_REG, sc->ctrl_register);
 
 	if (sc->type == HDSP_9652)
