@@ -39,9 +39,11 @@
 /* Hardware mixer */
 #define	HDSP_OUT_ENABLE_BASE		128
 #define	HDSP_IN_ENABLE_BASE		384
-/* TODO: Mixer base is probably 4096... */
-#define	HDSP_MIXER_BASE		32768
+#define	HDSP_MIXER_BASE			4096
 #define	HDSP_MAX_GAIN			32768
+#define	HDSP_MIN_GAIN			0
+#define	HDSP_MIX_SLOTS_9632		16
+#define	HDSP_MIX_SLOTS_9652		26
 #define	HDSP_CONTROL2_9652_MIXER	(1 << 11)
 
 /* Buffer */

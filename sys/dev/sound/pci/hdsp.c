@@ -589,6 +589,7 @@ static int
 hdsp_init(struct sc_info *sc)
 {
 	long long period;
+	unsigned mixer_controls;
 
 	/* Set latency. */
 	sc->period = 256;
@@ -625,12 +626,25 @@ hdsp_init(struct sc_info *sc)
 		hdsp_write_4(sc, HDSP_CONTROL2_REG, 0);
 
 	switch (sc->type) {
-	case HDSP_9652:
 	case HDSP_9632:
+		/* Mixer matrix is 2 source rows (input, playback) per output. */
+		mixer_controls = 2 * HDSP_MIX_SLOTS_9632 * HDSP_MIX_SLOTS_9632;
 		period = HDSP_FREQ_9632;
+		break;
+	case HDSP_9652:
+		/* Mixer matrix is 2 source rows (input, playback) per output. */
+		mixer_controls = 2 * HDSP_MIX_SLOTS_9652 * HDSP_MIX_SLOTS_9652;
+		period = 0;
 		break;
 	default:
 		return (ENXIO);
+	}
+
+	/* Initialize mixer matrix by silencing all controls. */
+	for (unsigned offset = 0; offset < mixer_controls * 2; offset += 4) {
+		/* Only accepts 4 byte values, pairs of 16 bit volume controls. */
+		hdsp_write_4(sc, HDSP_MIXER_BASE + offset,
+		    (HDSP_MIN_GAIN << 16) | HDSP_MIN_GAIN);
 	}
 
 	if (sc->type == HDSP_9632) {
