@@ -221,18 +221,48 @@ hdsp_hw_mixer(struct sc_chinfo *ch, unsigned int dst,
 {
 	struct sc_pcminfo *scp;
 	struct sc_info *sc;
-	int offs;
+	uint32_t value;
+	int offset;
 
 	scp = ch->parent;
 	sc = scp->sc;
 
-	offs = 0;
-	if (ch->dir == PCMDIR_PLAY)
-		offs = 64;
+	offset = 0;
+	value = (HDSP_MIN_GAIN << 16) | (uint16_t) data;
 
-	hdsp_write_4(sc, HDSP_MIXER_BASE +
-	    ((offs + src + 128 * dst) * sizeof(uint32_t)),
-	    data & 0xFFFF);
+	if (ch->dir != PCMDIR_PLAY)
+		return (0);
+
+	switch (sc->type) {
+	case HDSP_9632:
+		/* Mixer is 2 rows of sources (inputs, playback) per output. */
+		offset = dst * (2 * HDSP_MIX_SLOTS_9632);
+		/* Source index in the second row (playback). */
+		offset += HDSP_MIX_SLOTS_9632 + src;
+		break;
+	case HDSP_9652:
+		/* Mixer is 2 rows of sources (inputs, playback) per output. */
+		offset = dst * (2 * HDSP_MIX_SLOTS_9652);
+		/* Source index in the second row (playback). */
+		offset += HDSP_MIX_SLOTS_9652 + src;
+		break;
+	default:
+		return (0);
+	}
+
+	/*
+	 * We have to write mixer matrix values in pairs, with the second
+	 * (odd) value in the upper 16 bits of the 32 bit value.
+	 * Make value offset even and shift value accordingly.
+	 * Assume the paired value to be silenced, since we only set gain
+	 * on the diagonal where src and dst are the same.
+	 */
+	if (offset % 2) {
+		offset -= 1;
+		value = (value << 16) | HDSP_MIN_GAIN;
+	}
+
+	hdsp_write_4(sc, HDSP_MIXER_BASE + offset * sizeof(uint16_t), value);
 
 	return (0);
 };
