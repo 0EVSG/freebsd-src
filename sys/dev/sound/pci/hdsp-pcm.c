@@ -565,7 +565,7 @@ buffer_copy(struct sc_chinfo *ch)
 	struct sc_info *sc;
 	uint32_t row, ports;
 	uint32_t dma_pos;
-	unsigned int pos, length, offset;
+	unsigned int pos, length, length2, offset, buffer_size;
 	unsigned int n;
 	unsigned int adat_width, pcm_width;
 
@@ -583,19 +583,22 @@ buffer_copy(struct sc_chinfo *ch)
 	else
 		pcm_width = 8;
 
+	/* HDSP cards read / write a double buffer, twice the latency period. */
+	buffer_size = 2 * sc->period * sizeof(uint32_t);
+
 	/* Derive buffer position and length to be copied. */
 	if (ch->dir == PCMDIR_PLAY) {
 		/* Position per channel is n times smaller than PCM. */
 		pos = sndbuf_getreadyptr(ch->buffer) / n;
 		length = sndbuf_getready(ch->buffer) / n;
 		/* Copy no more than 2 periods in advance. */
-		if (length > (sc->period * 4 * 2))
-			length = (sc->period * 4 * 2);
+		if (length > buffer_size)
+			length = buffer_size;
 		/* Skip what was already copied last time. */
-		offset = (ch->position + HDSP_CHANBUF_SIZE) - pos;
-		offset %= HDSP_CHANBUF_SIZE;
+		offset = (ch->position + buffer_size) - pos;
+		offset %= buffer_size;
 		if (offset <= length) {
-			pos = (pos + offset) % HDSP_CHANBUF_SIZE;
+			pos = (pos + offset) % buffer_size;
 			length -= offset;
 		}
 	} else {
@@ -604,14 +607,22 @@ buffer_copy(struct sc_chinfo *ch)
 		/* Get DMA buffer write position. */
 		dma_pos = hdsp_read_2(sc, HDSP_STATUS_REG);
 		dma_pos &= HDSP_BUF_POSITION_MASK;
+		dma_pos %= buffer_size;
 		/* Copy what is newly available. */
-		length = (dma_pos + HDSP_CHANBUF_SIZE) - pos;
-		length %= HDSP_CHANBUF_SIZE;
+		length = (dma_pos + buffer_size) - pos;
+		length %= buffer_size;
 	}
 
 	/* Position and length in samples (4 bytes). */
 	pos /= 4;
 	length /= 4;
+	buffer_size /= sizeof(uint32_t);
+
+	length2 = 0;
+	if (pos + length > buffer_size) {
+		length2 = (pos + length) - buffer_size;
+		length = buffer_size - pos;
+	}
 
 	/* Iterate through rows of ports with contiguous slots. */
 	ports = ch->ports;
@@ -621,12 +632,17 @@ buffer_copy(struct sc_chinfo *ch)
 		row = hdsp_port_first(ports);
 
 	while (row != 0) {
-		if (ch->dir == PCMDIR_PLAY)
+		if (ch->dir == PCMDIR_PLAY) {
 			buffer_mux_port(sc->pbuf, ch->data, row, ch->ports, pos,
 			    length, adat_width, pcm_width);
-		else
+			buffer_mux_port(sc->pbuf, ch->data, row, ch->ports, 0,
+			    length2, adat_width, pcm_width);
+		} else {
 			buffer_demux_port(sc->rbuf, ch->data, row, ch->ports,
 			    pos, length, adat_width, pcm_width);
+			buffer_demux_port(sc->rbuf, ch->data, row, ch->ports,
+			    0, length2, adat_width, pcm_width);
+		}
 
 		ports &= ~row;
 		if (pcm_width == adat_width)
@@ -635,7 +651,7 @@ buffer_copy(struct sc_chinfo *ch)
 			row = hdsp_port_first(ports);
 	}
 
-	ch->position = ((pos + length) * 4) % HDSP_CHANBUF_SIZE;
+	ch->position = ((pos + length + length2) * 4) % buffer_size;
 }
 
 static int
@@ -795,6 +811,7 @@ hdspchan_getptr(kobj_t obj, void *data)
 	snd_mtxunlock(sc->lock);
 
 	pos = ret & HDSP_BUF_POSITION_MASK;
+	pos %= (2 * sc->period * sizeof(uint32_t));
 	pos *= AFMT_CHANNEL(ch->format); /* Hardbuf with multiple channels. */
 
 	return (pos);
@@ -982,9 +999,8 @@ hdspchan_setblocksize(kobj_t obj, void *data, uint32_t blocksize)
 	device_printf(scp->dev, "New period=%d\n", sc->period);
 #endif
 
-	sndbuf_resize(ch->buffer,
-	    (HDSP_CHANBUF_SIZE * AFMT_CHANNEL(ch->format)) / (sc->period * 4),
-	    (sc->period * 4));
+	sndbuf_resize(ch->buffer, 2,
+	    (sc->period * AFMT_CHANNEL(ch->format) * sizeof(uint32_t)));
 
 	/* TODO: Rewrite frequency (same register) for 9632. */
 	hdsp_write_4(sc, HDSP_RESET_POINTER, 0);
