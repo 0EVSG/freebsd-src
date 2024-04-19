@@ -84,6 +84,48 @@ static struct hdsp_rate rate_map[] = {
 };
 
 static uint32_t
+hdsp_adat_slot_map(uint32_t speed)
+{
+	/* ADAT slot bitmap depends on sample rate. */
+	if (speed <= 48000)
+		return (0x000000ff); /* 8 channels single speed. */
+	else if (speed <= 96000)
+		return (0x000000aa); /* 4 channels (1,3,5,7) double speed. */
+	else
+		return (0x00000000); /* ADAT disabled at quad speed. */
+}
+
+static uint32_t
+hdsp_slot_map(uint32_t ports, uint32_t speed)
+{
+	uint32_t slot_map = 0;
+
+	if (ports & HDSP_CHAN_9632_ALL) {
+		/* Map HDSP 9632 ports to slot bitmap. */
+		if (ports & HDSP_CHAN_9632_ADAT)
+			slot_map |= (hdsp_adat_slot_map(speed) << 0);
+		if (ports & HDSP_CHAN_9632_SPDIF)
+			slot_map |= (0x03 << 8);  /* 2 channels SPDIF. */
+		if (ports & HDSP_CHAN_9632_LINE)
+			slot_map |= (0x03 << 10); /* 2 channels line. */
+		if (ports & HDSP_CHAN_9632_EXT_BOARD)
+			slot_map |= (0x0f << 12); /* 4 channels extension. */
+	} else if ((ports & HDSP_CHAN_9652_ALL) && (speed <= 96000)) {
+		/* Map HDSP 9652 ports to slot bitmap, no quad speed. */
+		if (ports & HDSP_CHAN_9652_ADAT1)
+			slot_map |= (hdsp_adat_slot_map(speed) << 0);
+		if (ports & HDSP_CHAN_9652_ADAT2)
+			slot_map |= (hdsp_adat_slot_map(speed) << 8);
+		if (ports & HDSP_CHAN_9652_ADAT3)
+			slot_map |= (hdsp_adat_slot_map(speed) << 16);
+		if (ports & HDSP_CHAN_9652_SPDIF)
+			slot_map |= (0x03 << 24); /* 2 channels SPDIF. */
+	}
+
+	return (slot_map);
+}
+
+static uint32_t
 hdsp_channel_play_ports(struct hdsp_channel *hc)
 {
 	return (hc->ports & (HDSP_CHAN_9632_ALL | HDSP_CHAN_9652_ALL));
