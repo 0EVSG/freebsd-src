@@ -431,6 +431,7 @@ hdspmixer_set(struct snd_mixer *m, unsigned dev,
 		    (dev == SOUND_MIXER_RECLEV && ch->dir == PCMDIR_REC)) {
 			ch->lvol = left;
 			ch->rvol = right;
+			/* TODO: Why only set gain when running? */
 			if (ch->run)
 				hdspchan_setgain(ch);
 		}
