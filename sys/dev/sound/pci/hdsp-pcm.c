@@ -736,8 +736,8 @@ clean(struct sc_chinfo *ch)
 	struct sc_pcminfo *scp;
 	struct sc_info *sc;
 	uint32_t *buf;
-	uint32_t row, ports;
-	unsigned int offset, slots;
+	uint32_t slot, slots;
+	unsigned int offset;
 
 	scp = ch->parent;
 	sc = scp->sc;
@@ -746,19 +746,16 @@ clean(struct sc_chinfo *ch)
 	if (ch->dir == PCMDIR_PLAY)
 		buf = sc->pbuf;
 
-	/* Iterate through rows of ports with contiguous slots. */
-	ports = ch->ports;
-	row = hdsp_port_first_row(ports);
-	while (row != 0) {
-		offset = hdsp_port_slot_offset(row,
-		    hdsp_adat_width(sc->speed));
-		slots = hdsp_port_slot_width(row, hdsp_adat_width(sc->speed));
+	/* Iterate through all of the channel's slots. */
+	slots = hdsp_slot_map(ch->ports, sc->speed);
+	slot = hdsp_slot_first(slots);
+	while (slot != 0) {
+		/* Clear the slot's buffer. */
+		offset = hdsp_slot_offset(slot);
+		bzero(buf + offset * HDSP_CHANBUF_SAMPLES, HDSP_CHANBUF_SIZE);
 
-		bzero(buf + offset * HDSP_CHANBUF_SAMPLES,
-		    slots * HDSP_CHANBUF_SIZE);
-
-		ports &= ~row;
-		row = hdsp_port_first_row(ports);
+		slots &= ~slot;
+		slot = hdsp_slot_first(slots);
 	}
 
 	ch->position = 0;
