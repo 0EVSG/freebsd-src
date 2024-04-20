@@ -452,9 +452,9 @@ hdspchan_enable(struct sc_chinfo *ch, int value)
 {
 	struct sc_pcminfo *scp;
 	struct sc_info *sc;
-	uint32_t row, ports;
+	uint32_t slot, slots;
+	unsigned int offset;
 	int reg;
-	unsigned int slot, end_slot;
 
 	scp = ch->parent;
 	sc = scp->sc;
@@ -472,21 +472,16 @@ hdspchan_enable(struct sc_chinfo *ch, int value)
 	    hdsp_port_slot_width(ch->ports, hdsp_adat_width(sc->speed)),
 	    hdsp_port_slot_offset(ch->ports, hdsp_adat_width(sc->speed)));
 
-	/* Iterate through rows of ports with contiguous slots. */
-	ports = ch->ports;
-	row = hdsp_port_first_row(ports);
-	while (row != 0) {
-		slot =
-		    hdsp_port_slot_offset(row, hdsp_adat_width(sc->speed));
-		end_slot = slot +
-		    hdsp_port_slot_width(row, hdsp_adat_width(sc->speed));
+	/* Iterate through all slots of the channel's physical ports. */
+	slots = hdsp_slot_map(ch->ports, sc->speed);
+	slot = hdsp_slot_first(slots);
+	while (slot != 0) {
+		/* Set register to enable or disable slot. */
+		offset = hdsp_slot_offset(slot);
+		hdsp_write_1(sc, reg + (4 * offset), value);
 
-		for (; slot < end_slot; slot++) {
-			hdsp_write_1(sc, reg + (4 * slot), value);
-		}
-
-		ports &= ~row;
-		row = hdsp_port_first_row(ports);
+		slots &= ~slot;
+		slot = hdsp_slot_first(slots);
 	}
 }
 
