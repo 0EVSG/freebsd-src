@@ -142,6 +142,19 @@ hdsp_slot_first_row(uint32_t slots)
 	return (slots & (ends ^ (ends - 1)));
 }
 
+static uint32_t
+hdsp_slot_first_n(uint32_t slots, unsigned int n)
+{
+	/* Clear all but the first n slots. */
+	for (uint32_t slot = 1; slot != 0; slot <<= 1) {
+		if ((slots & slot) && n > 0)
+			--n;
+		else
+			slots &= ~slot;
+	}
+	return (slots);
+}
+
 static unsigned int
 hdsp_slot_count(uint32_t slots)
 {
@@ -157,6 +170,19 @@ static unsigned int
 hdsp_slot_offset(uint32_t slots)
 {
 	return (hdsp_slot_count(hdsp_slot_first(slots) - 1));
+}
+
+static unsigned int
+hdsp_slot_channel_offset(uint32_t subset, uint32_t slots)
+{
+	uint32_t preceding;
+
+	/* Make sure we have a subset of slots. */
+	subset &= slots;
+	/* Include all slots preceding the first one of the subset. */
+	preceding = slots & (hdsp_slot_first(subset) - 1);
+
+	return (hdsp_slot_count(preceding));
 }
 
 static unsigned int
@@ -554,94 +580,92 @@ hdsp_stop_audio(struct sc_info *sc)
 
 static void
 buffer_mux_write(uint32_t *dma, uint32_t *pcm, unsigned int pos,
-    unsigned int samples, unsigned int slots, unsigned int channels)
+    unsigned int pos_end, unsigned int width, unsigned int channels)
 {
-	int slot;
+	unsigned int slot;
 
-	for (; samples > 0; samples--) {
-		for (slot = 0; slot < slots; slot++) {
+	for (; pos < pos_end; ++pos) {
+		for (slot = 0; slot < width; slot++) {
 			dma[slot * HDSP_CHANBUF_SAMPLES + pos] =
 			    pcm[pos * channels + slot];
 		}
-		pos = (pos + 1) % HDSP_CHANBUF_SAMPLES;
 	}
 }
 
 static void
-buffer_mux_port(uint32_t *dma, uint32_t *pcm, uint32_t subset, uint32_t ports,
-    unsigned int pos, unsigned int samples, unsigned int adat_width,
-    unsigned int pcm_width)
+buffer_mux_port(uint32_t *dma, uint32_t *pcm, uint32_t subset, uint32_t slots,
+    unsigned int pos, unsigned int samples, unsigned int channels)
 {
-	unsigned int slot_offset, slots;
-	unsigned int channels, chan_pos;
+	unsigned int slot_offset, width;
+	unsigned int chan_pos;
 
 	/* Translate DMA slot offset to DMA buffer offset. */
-	slot_offset = hdsp_port_slot_offset(subset, adat_width);
+	slot_offset = hdsp_slot_offset(subset);
 	dma += slot_offset * HDSP_CHANBUF_SAMPLES;
 
-	/* Channel position of the port subset and total number of channels. */
-	chan_pos = hdsp_channel_offset(subset, ports, pcm_width);
+	/* Channel position of the slot subset. */
+	chan_pos = hdsp_slot_channel_offset(subset, slots);
 	pcm += chan_pos;
-	channels = hdsp_channel_count(ports, pcm_width);
 
-	/* Only copy as much as supported by both hardware and pcm channel. */
-	slots = hdsp_port_slot_width(subset, MIN(adat_width, pcm_width));
+	/* Only copy channels supported by both hardware and pcm format. */
+	width = hdsp_slot_count(subset);
 
 	/* Let the compiler inline and loop unroll common cases. */
-	if (slots == 2)
-		buffer_mux_write(dma, pcm, pos, samples, 2, channels);
-	else if (slots == 4)
-		buffer_mux_write(dma, pcm, pos, samples, 4, channels);
-	else if (slots == 8)
-		buffer_mux_write(dma, pcm, pos, samples, 8, channels);
+	if (width == 1)
+		buffer_mux_write(dma, pcm, pos, pos + samples, 1, channels);
+	else if (width == 2)
+		buffer_mux_write(dma, pcm, pos, pos + samples, 2, channels);
+	else if (width == 4)
+		buffer_mux_write(dma, pcm, pos, pos + samples, 4, channels);
+	else if (width == 8)
+		buffer_mux_write(dma, pcm, pos, pos + samples, 8, channels);
 	else
-		buffer_mux_write(dma, pcm, pos, samples, slots, channels);
+		buffer_mux_write(dma, pcm, pos, pos + samples, width, channels);
 }
 
 static void
 buffer_demux_read(uint32_t *dma, uint32_t *pcm, unsigned int pos,
-    unsigned int samples, unsigned int slots, unsigned int channels)
+    unsigned int pos_end, unsigned int width, unsigned int channels)
 {
-	int slot;
+	unsigned int slot;
 
-	for (; samples > 0; samples--) {
-		for (slot = 0; slot < slots; slot++) {
+	for (; pos < pos_end; ++pos) {
+		for (slot = 0; slot < width; slot++) {
 			pcm[pos * channels + slot] =
 			    dma[slot * HDSP_CHANBUF_SAMPLES + pos];
 		}
-		pos = (pos + 1) % HDSP_CHANBUF_SAMPLES;
 	}
 }
 
 static void
-buffer_demux_port(uint32_t *dma, uint32_t *pcm, uint32_t subset, uint32_t ports,
-    unsigned int pos, unsigned int samples, unsigned int adat_width,
-    unsigned int pcm_width)
+buffer_demux_port(uint32_t *dma, uint32_t *pcm, uint32_t subset, uint32_t slots,
+    unsigned int pos, unsigned int samples, unsigned int channels)
 {
-	unsigned int slot_offset, slots;
-	unsigned int channels, chan_pos;
+	unsigned int slot_offset, width;
+	unsigned int chan_pos;
 
-	/* Translate port slot offset to DMA buffer offset. */
-	slot_offset = hdsp_port_slot_offset(subset, adat_width);
+	/* Translate DMA slot offset to DMA buffer offset. */
+	slot_offset = hdsp_slot_offset(subset);
 	dma += slot_offset * HDSP_CHANBUF_SAMPLES;
 
-	/* Channel position of the port subset and total number of channels. */
-	chan_pos = hdsp_channel_offset(subset, ports, pcm_width);
+	/* Channel position of the slot subset. */
+	chan_pos = hdsp_slot_channel_offset(subset, slots);
 	pcm += chan_pos;
-	channels = hdsp_channel_count(ports, pcm_width);
 
-	/* Only copy as much as supported by both hardware and pcm channel. */
-	slots = hdsp_port_slot_width(subset, MIN(adat_width, pcm_width));
+	/* Only copy channels supported by both hardware and pcm format. */
+	width = hdsp_slot_count(subset);
 
 	/* Let the compiler inline and loop unroll common cases. */
-	if (slots == 2)
-		buffer_demux_read(dma, pcm, pos, samples, 2, channels);
-	else if (slots == 4)
-		buffer_demux_read(dma, pcm, pos, samples, 4, channels);
-	else if (slots == 8)
-		buffer_demux_read(dma, pcm, pos, samples, 8, channels);
+	if (width == 1)
+		buffer_demux_read(dma, pcm, pos, pos + samples, 1, channels);
+	else if (width == 2)
+		buffer_demux_read(dma, pcm, pos, pos + samples, 2, channels);
+	else if (width == 4)
+		buffer_demux_read(dma, pcm, pos, pos + samples, 4, channels);
+	else if (width == 8)
+		buffer_demux_read(dma, pcm, pos, pos + samples, 8, channels);
 	else
-		buffer_demux_read(dma, pcm, pos, samples, slots, channels);
+		buffer_demux_read(dma, pcm, pos, pos + samples, width, channels);
 }
 
 
@@ -651,34 +675,24 @@ buffer_copy(struct sc_chinfo *ch)
 {
 	struct sc_pcminfo *scp;
 	struct sc_info *sc;
-	uint32_t row, ports;
+	uint32_t row, slots;
 	uint32_t dma_pos;
 	unsigned int pos, length, length2, offset, buffer_size;
-	unsigned int n;
-	unsigned int adat_width, pcm_width;
+	unsigned int channels;
 
 	scp = ch->parent;
 	sc = scp->sc;
 
-	n = AFMT_CHANNEL(ch->format); /* n channels */
-
-	/* Let pcm formats differ from current hardware ADAT width. */
-	adat_width = hdsp_adat_width(sc->speed);
-	if (n == hdsp_channel_count(ch->ports, 2))
-		pcm_width = 2;
-	else if (n == hdsp_channel_count(ch->ports, 4))
-		pcm_width = 4;
-	else
-		pcm_width = 8;
+	channels = AFMT_CHANNEL(ch->format); /* Number of PCM channels. */
 
 	/* HDSP cards read / write a double buffer, twice the latency period. */
 	buffer_size = 2 * sc->period * sizeof(uint32_t);
 
 	/* Derive buffer position and length to be copied. */
 	if (ch->dir == PCMDIR_PLAY) {
-		/* Position per channel is n times smaller than PCM. */
-		pos = sndbuf_getreadyptr(ch->buffer) / n;
-		length = sndbuf_getready(ch->buffer) / n;
+		/* Buffer position scaled down to a single channel. */
+		pos = sndbuf_getreadyptr(ch->buffer) / channels;
+		length = sndbuf_getready(ch->buffer) / channels;
 		/* Copy no more than 2 periods in advance. */
 		if (length > buffer_size)
 			length = buffer_size;
@@ -690,8 +704,8 @@ buffer_copy(struct sc_chinfo *ch)
 			length -= offset;
 		}
 	} else {
-		/* Position per channel is n times smaller than PCM. */
-		pos = sndbuf_getfreeptr(ch->buffer) / n;
+		/* Buffer position scaled down to a single channel. */
+		pos = sndbuf_getfreeptr(ch->buffer) / channels;
 		/* Get DMA buffer write position. */
 		dma_pos = hdsp_read_2(sc, HDSP_STATUS_REG);
 		dma_pos &= HDSP_BUF_POSITION_MASK;
@@ -712,31 +726,26 @@ buffer_copy(struct sc_chinfo *ch)
 		length = buffer_size - pos;
 	}
 
-	/* Iterate through rows of ports with contiguous slots. */
-	ports = ch->ports;
-	if (pcm_width == adat_width)
-		row = hdsp_port_first_row(ports);
-	else
-		row = hdsp_port_first(ports);
+	/* Iterate through rows of contiguous slots. */
+	slots = hdsp_port_slot_map(ch->ports, sc->speed);
+	slots = hdsp_slot_first_n(slots, channels);
+	row = hdsp_slot_first_row(slots);
 
 	while (row != 0) {
 		if (ch->dir == PCMDIR_PLAY) {
-			buffer_mux_port(sc->pbuf, ch->data, row, ch->ports, pos,
-			    length, adat_width, pcm_width);
-			buffer_mux_port(sc->pbuf, ch->data, row, ch->ports, 0,
-			    length2, adat_width, pcm_width);
+			buffer_mux_port(sc->pbuf, ch->data, row, slots, pos,
+			    length, channels);
+			buffer_mux_port(sc->pbuf, ch->data, row, slots, 0,
+			    length2, channels);
 		} else {
-			buffer_demux_port(sc->rbuf, ch->data, row, ch->ports,
-			    pos, length, adat_width, pcm_width);
-			buffer_demux_port(sc->rbuf, ch->data, row, ch->ports,
-			    0, length2, adat_width, pcm_width);
+			buffer_demux_port(sc->rbuf, ch->data, row, slots, pos,
+			    length, channels);
+			buffer_demux_port(sc->rbuf, ch->data, row, slots, 0,
+			    length2, channels);
 		}
 
-		ports &= ~row;
-		if (pcm_width == adat_width)
-			row = hdsp_port_first_row(ports);
-		else
-			row = hdsp_port_first(ports);
+		slots &= ~row;
+		row = hdsp_slot_first_row(slots);
 	}
 
 	ch->position = ((pos + length + length2) * 4) % buffer_size;
