@@ -96,7 +96,7 @@ hdsp_adat_slot_map(uint32_t speed)
 }
 
 static uint32_t
-hdsp_slot_map(uint32_t ports, uint32_t speed)
+hdsp_port_slot_map(uint32_t ports, uint32_t speed)
 {
 	uint32_t slot_map = 0;
 
@@ -157,6 +157,18 @@ static unsigned int
 hdsp_slot_offset(uint32_t slots)
 {
 	return (hdsp_slot_count(hdsp_slot_first(slots) - 1));
+}
+
+static unsigned int
+hdsp_port_slot_count(uint32_t ports, uint32_t speed)
+{
+	return (hdsp_slot_count(hdsp_port_slot_map(ports, speed)));
+}
+
+static unsigned int
+hdsp_port_slot_count_max(uint32_t ports)
+{
+	return (hdsp_slot_count(hdsp_port_slot_map(ports, 48000)));
 }
 
 static uint32_t
@@ -359,7 +371,7 @@ hdspchan_setgain(struct sc_chinfo *ch)
 	port = hdsp_port_first(ports);
 	while (port != 0) {
 		/* Get slot map from physical port. */
-		slots = hdsp_slot_map(port, sc->speed);
+		slots = hdsp_port_slot_map(port, sc->speed);
 		slot = hdsp_slot_first(slots);
 
 		/* Treat first slot as left channel. */
@@ -467,13 +479,13 @@ hdspchan_enable(struct sc_chinfo *ch, int value)
 	ch->run = value;
 
 	device_printf(sc->dev, "%d channels at %d -> %d slots at %d.\n",
-	    hdsp_channel_count(ch->ports, hdsp_adat_width(sc->speed)),
+	    hdsp_port_slot_count(ch->ports, sc->speed),
 	    hdsp_channel_offset(ch->ports, ch->ports, hdsp_adat_width(sc->speed)),
 	    hdsp_port_slot_width(ch->ports, hdsp_adat_width(sc->speed)),
 	    hdsp_port_slot_offset(ch->ports, hdsp_adat_width(sc->speed)));
 
 	/* Iterate through all slots of the channel's physical ports. */
-	slots = hdsp_slot_map(ch->ports, sc->speed);
+	slots = hdsp_port_slot_map(ch->ports, sc->speed);
 	slot = hdsp_slot_first(slots);
 	while (slot != 0) {
 		/* Set register to enable or disable slot. */
@@ -747,7 +759,7 @@ clean(struct sc_chinfo *ch)
 		buf = sc->pbuf;
 
 	/* Iterate through all of the channel's slots. */
-	slots = hdsp_slot_map(ch->ports, sc->speed);
+	slots = hdsp_port_slot_map(ch->ports, sc->speed);
 	slot = hdsp_slot_first(slots);
 	while (slot != 0) {
 		/* Clear the slot's buffer. */
@@ -792,18 +804,24 @@ hdspchan_init(kobj_t obj, void *devinfo, struct snd_dbuf *b,
 
 	/* Support all possible ADAT widths as channel formats. */
 	ch->cap_fmts[0] =
-	    SND_FORMAT(AFMT_S32_LE, hdsp_channel_count(ch->ports, 2), 0);
+	    SND_FORMAT(AFMT_S32_LE, hdsp_port_slot_count(ch->ports, 48000), 0);
 	ch->cap_fmts[1] =
-	    SND_FORMAT(AFMT_S32_LE, hdsp_channel_count(ch->ports, 4), 0);
+	    SND_FORMAT(AFMT_S32_LE, hdsp_port_slot_count(ch->ports, 96000), 0);
 	ch->cap_fmts[2] =
-	    SND_FORMAT(AFMT_S32_LE, hdsp_channel_count(ch->ports, 8), 0);
+	    SND_FORMAT(AFMT_S32_LE, hdsp_port_slot_count(ch->ports, 192000), 0);
 	ch->cap_fmts[3] = 0;
+
 	ch->caps = malloc(sizeof(struct pcmchan_caps), M_HDSP, M_NOWAIT);
-	/* TODO: Allow quad speed sample rates for HDSP 9632. */
-	*(ch->caps) = (struct pcmchan_caps) {32000, 96000, ch->cap_fmts, 0};
+	*(ch->caps) = (struct pcmchan_caps) {32000, 192000, ch->cap_fmts, 0};
+
+	/* HDSP 9652 does not support quad speed sample rates. */
+	if (sc->type == HDSP_9652) {
+		ch->cap_fmts[2] = 0;
+		ch->caps->maxspeed = 96000;
+	}
 
 	/* Allocate maximum buffer size. */
-	ch->size = HDSP_CHANBUF_SIZE * hdsp_channel_count(ch->ports, 8);
+	ch->size = HDSP_CHANBUF_SIZE * hdsp_port_slot_count_max(ch->ports);
 	ch->data = malloc(ch->size, M_HDSP, M_NOWAIT);
 	ch->position = 0;
 
@@ -1087,7 +1105,7 @@ static uint32_t hdsp_bkp_fmt[] = {
 	0
 };
 
-/* TODO: Allow quad speed sample rates for HDSP 9632. */
+/* Capabilities fallback, no quad speed for HDSP 9652 compatibility. */
 static struct pcmchan_caps hdsp_bkp_caps = {32000, 96000, hdsp_bkp_fmt, 0};
 
 static struct pcmchan_caps *
@@ -1176,7 +1194,7 @@ hdsp_pcm_attach(device_t dev)
 	 * in pcm device. Mark pcm device as MPSAFE manually.
 	 */
 	pcm_flags = pcm_getflags(dev) | SD_F_MPSAFE;
-	if (hdsp_channel_count(scp->hc->ports, 8) > HDSP_MATRIX_MAX)
+	if (hdsp_port_slot_count_max(scp->hc->ports) > HDSP_MATRIX_MAX)
 		/* Disable vchan conversion, too many channels. */
 		pcm_flags |= SD_F_BITPERFECT;
 	pcm_setflags(dev, pcm_flags);
