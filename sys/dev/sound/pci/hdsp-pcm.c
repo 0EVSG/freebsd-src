@@ -126,6 +126,40 @@ hdsp_slot_map(uint32_t ports, uint32_t speed)
 }
 
 static uint32_t
+hdsp_slot_first(uint32_t slots)
+{
+	return (slots & (~(slots - 1)));	/* Extract first bit set. */
+}
+
+static uint32_t
+hdsp_slot_first_row(uint32_t slots)
+{
+	uint32_t ends;
+
+	/* Ends of slot rows are followed by a slot which is not in the set. */
+	ends = slots & (~(slots >> 1));
+	/* First row of contiguous slots ends in the first row end. */
+	return (slots & (ends ^ (ends - 1)));
+}
+
+static unsigned int
+hdsp_slot_count(uint32_t slots)
+{
+	unsigned int count = 0;
+
+	for (int i = 0; i < (sizeof(slots) * 8); ++i) {
+		count += ((slots >> i) & 0x01);
+	}
+	return (count);
+}
+
+static unsigned int
+hdsp_slot_offset(uint32_t slots)
+{
+	return (hdsp_slot_count(hdsp_slot_first(slots) - 1));
+}
+
+static uint32_t
 hdsp_channel_play_ports(struct hdsp_channel *hc)
 {
 	return (hc->ports & (HDSP_CHAN_9632_ALL | HDSP_CHAN_9652_ALL));
