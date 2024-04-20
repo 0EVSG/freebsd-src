@@ -348,7 +348,8 @@ hdspchan_setgain(struct sc_chinfo *ch)
 {
 	struct sc_info *sc;
 	uint32_t port, ports;
-	unsigned int slot, end_slot;
+	uint32_t slot, slots;
+	unsigned int offset;
 	unsigned short volume;
 
 	sc = ch->parent->sc;
@@ -357,16 +358,19 @@ hdspchan_setgain(struct sc_chinfo *ch)
 	ports = ch->ports;
 	port = hdsp_port_first(ports);
 	while (port != 0) {
-		/* Get slot range of the physical port. */
-		slot =
-		    hdsp_port_slot_offset(port, hdsp_adat_width(sc->speed));
-		end_slot = slot +
-		    hdsp_port_slot_width(port, hdsp_adat_width(sc->speed));
+		/* Get slot map from physical port. */
+		slots = hdsp_slot_map(port, sc->speed);
+		slot = hdsp_slot_first(slots);
 
 		/* Treat first slot as left channel. */
 		volume = ch->lvol * HDSP_MAX_GAIN / 100;
-		for (; slot < end_slot; slot++) {
-			hdsp_hw_mixer(ch, slot, slot, volume);
+		while (slot != 0) {
+			offset = hdsp_slot_offset(slot);
+			hdsp_hw_mixer(ch, offset, offset, volume);
+
+			slots &= ~slot;
+			slot = hdsp_port_first(slots);
+
 			/* Subsequent slots all get the right channel volume. */
 			volume = ch->rvol * HDSP_MAX_GAIN / 100;
 		}
