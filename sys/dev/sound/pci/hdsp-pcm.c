@@ -160,6 +160,7 @@ hdsp_slot_count(uint32_t slots)
 {
 	unsigned int count = 0;
 
+	/* TODO: Use bitcount() from libkern.h? */
 	for (int i = 0; i < (sizeof(slots) * 8); ++i) {
 		count += ((slots >> i) & 0x01);
 	}
@@ -185,6 +186,12 @@ hdsp_slot_channel_offset(uint32_t subset, uint32_t slots)
 	return (hdsp_slot_count(preceding));
 }
 
+static uint32_t
+hdsp_port_first(uint32_t ports)
+{
+	return (ports & (~(ports - 1)));	/* Extract first bit set. */
+}
+
 static unsigned int
 hdsp_port_slot_count(uint32_t ports, uint32_t speed)
 {
@@ -207,126 +214,6 @@ static uint32_t
 hdsp_channel_rec_ports(struct hdsp_channel *hc)
 {
 	return (hc->ports & (HDSP_CHAN_9632_ALL | HDSP_CHAN_9652_ALL));
-}
-
-static unsigned int
-hdsp_adat_width(uint32_t speed)
-{
-	if (speed > 96000)
-		return (2);
-	if (speed > 48000)
-		return (4);
-	return (8);
-}
-
-static uint32_t
-hdsp_port_first(uint32_t ports)
-{
-	return (ports & (~(ports - 1)));	/* Extract first bit set. */
-}
-
-static uint32_t
-hdsp_port_first_row(uint32_t ports)
-{
-	uint32_t ends;
-
-	/* Restrict ports to one set with contiguous slots. */
-	if (ports & HDSP_CHAN_9632_ADAT)
-		ports = HDSP_CHAN_9632_ADAT;
-	else if (ports & HDSP_CHAN_9632_ALL)	/* Gap after ADAT for 96kHz. */
-		ports &= HDSP_CHAN_9632_ALL;
-	else if (ports & HDSP_CHAN_9652_ADAT_ALL)
-		ports &= HDSP_CHAN_9652_ADAT_ALL;
-	else if (ports & HDSP_CHAN_9652_SPDIF)	/* Gap after ADAT for 96kHz. */
-		ports &= HDSP_CHAN_9652_SPDIF;
-
-	/* Ends of port rows are followed by a port which is not in the set. */
-	ends = ports & (~(ports >> 1));
-	/* First row of contiguous ports ends in the first row end. */
-	return (ports & (ends ^ (ends - 1)));
-}
-
-static unsigned int
-hdsp_channel_count(uint32_t ports, uint32_t adat_width)
-{
-	unsigned int count = 0;
-
-	if (ports & HDSP_CHAN_9632_ALL) {
-		/* HDSP 9632 ports. */
-		if (ports & HDSP_CHAN_9632_ADAT)
-			count += adat_width;
-		if (ports & HDSP_CHAN_9632_SPDIF)
-			count += 2;
-		if (ports & HDSP_CHAN_9632_LINE)
-			count += 2;
-	} else if (ports & HDSP_CHAN_9652_ALL) {
-		/* HDSP 9652 ports. */
-		if (ports & HDSP_CHAN_9652_ADAT1)
-			count += adat_width;
-		if (ports & HDSP_CHAN_9652_ADAT2)
-			count += adat_width;
-		if (ports & HDSP_CHAN_9652_ADAT3)
-			count += adat_width;
-		if (ports & HDSP_CHAN_9652_SPDIF)
-			count += 2;
-	}
-
-	return (count);
-}
-
-static unsigned int
-hdsp_channel_offset(uint32_t subset, uint32_t ports, unsigned int adat_width)
-{
-	uint32_t preceding;
-
-	/* Make sure we have a subset of ports. */
-	subset &= ports;
-	/* Include all ports preceding the first one of the subset. */
-	preceding = ports & (~subset & (subset - 1));
-
-	if (preceding & HDSP_CHAN_9632_ALL)
-		preceding &= HDSP_CHAN_9632_ALL;	/* Contiguous 9632 slots. */
-	else if (preceding & HDSP_CHAN_9652_ALL)
-		preceding &= HDSP_CHAN_9652_ALL;	/* Contiguous 9652 slots. */
-
-	return (hdsp_channel_count(preceding, adat_width));
-}
-
-static unsigned int
-hdsp_port_slot_offset(uint32_t port, unsigned int adat_width)
-{
-	/* Exctract the first port (lowest bit) if set of ports. */
-	switch (hdsp_port_first(port)) {
-	/* HDSP 9632 ports */
-	case HDSP_CHAN_9632_ADAT:
-		return (0);
-	case HDSP_CHAN_9632_SPDIF:
-		return (8);
-	case HDSP_CHAN_9632_LINE:
-		return (10);
-
-	/* HDSP 9652 ports */
-	case HDSP_CHAN_9652_ADAT1:
-		return (0);
-	case HDSP_CHAN_9652_ADAT2:
-		return (adat_width);
-	case HDSP_CHAN_9652_ADAT3:
-		return (2 * adat_width);
-	case HDSP_CHAN_9652_SPDIF:
-		return (24);
-	default:
-		return (0);
-	}
-}
-
-static unsigned int
-hdsp_port_slot_width(uint32_t ports, unsigned int adat_width)
-{
-	uint32_t row;
-
-	/* Count number of contiguous slots from the first physical port. */
-	row = hdsp_port_first_row(ports);
-	return (hdsp_channel_count(row, adat_width));
 }
 
 static int
@@ -407,7 +294,7 @@ hdspchan_setgain(struct sc_chinfo *ch)
 			hdsp_hw_mixer(ch, offset, offset, volume);
 
 			slots &= ~slot;
-			slot = hdsp_port_first(slots);
+			slot = hdsp_slot_first(slots);
 
 			/* Subsequent slots all get the right channel volume. */
 			volume = ch->rvol * HDSP_MAX_GAIN / 100;
@@ -503,12 +390,6 @@ hdspchan_enable(struct sc_chinfo *ch, int value)
 		reg = HDSP_IN_ENABLE_BASE;
 
 	ch->run = value;
-
-	device_printf(sc->dev, "%d channels at %d -> %d slots at %d.\n",
-	    hdsp_port_slot_count(ch->ports, sc->speed),
-	    hdsp_channel_offset(ch->ports, ch->ports, hdsp_adat_width(sc->speed)),
-	    hdsp_port_slot_width(ch->ports, hdsp_adat_width(sc->speed)),
-	    hdsp_port_slot_offset(ch->ports, hdsp_adat_width(sc->speed)));
 
 	/* Iterate through all slots of the channel's physical ports. */
 	slots = hdsp_port_slot_map(ch->ports, sc->speed);
