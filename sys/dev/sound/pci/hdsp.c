@@ -293,8 +293,8 @@ hdsp_sysctl_period(SYSCTL_HANDLER_ARGS)
 	/* Period is from 2^5 to 2^14, 0 falls back to pcm latency settings. */
 	sc->force_period = 0;
 	if (period > 0) {
-		/* TODO: Allow period of 32 for HDSP 9652. */
-		sc->force_period = 64;
+		/* TODO: Period of 32 not supported by HDSP 9632? */
+		sc->force_period = 32;
 		while (sc->force_period < period && sc->force_period < 4096)
 			sc->force_period <<= 1;
 	}
