@@ -588,7 +588,6 @@ hdsp_probe(device_t dev)
 static int
 hdsp_init(struct sc_info *sc)
 {
-	long long period;
 	unsigned mixer_controls;
 
 	/* Set latency. */
@@ -629,12 +628,10 @@ hdsp_init(struct sc_info *sc)
 	case HDSP_9632:
 		/* Mixer matrix is 2 source rows (input, playback) per output. */
 		mixer_controls = 2 * HDSP_MIX_SLOTS_9632 * HDSP_MIX_SLOTS_9632;
-		period = HDSP_FREQ_9632;
 		break;
 	case HDSP_9652:
 		/* Mixer matrix is 2 source rows (input, playback) per output. */
 		mixer_controls = 2 * HDSP_MIX_SLOTS_9652 * HDSP_MIX_SLOTS_9652;
-		period = 0;
 		break;
 	default:
 		return (ENXIO);
@@ -647,12 +644,11 @@ hdsp_init(struct sc_info *sc)
 		    (HDSP_MIN_GAIN << 16) | HDSP_MIN_GAIN);
 	}
 
+	/* Reset pointer, rewrite frequency (same register) for 9632. */
+	hdsp_write_4(sc, HDSP_RESET_POINTER, 0);
 	if (sc->type == HDSP_9632) {
 		/* Set DDS value. */
-		period /= sc->speed;
-		hdsp_write_4(sc, HDSP_FREQ_REG, period);
-	} else {
-		hdsp_write_4(sc, HDSP_RESET_POINTER, 0);
+		hdsp_write_4(sc, HDSP_FREQ_REG, hdsp_freq_reg_value(sc->speed));
 	}
 
 	return (0);

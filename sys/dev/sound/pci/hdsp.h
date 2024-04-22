@@ -67,6 +67,10 @@
 /* TODO: Only needed for 9632, firmware >= 152? */
 #define	HDSP_FREQ_REG			0
 #define	HDSP_FREQ_9632			104857600000000ULL
+#define	hdsp_freq_multiplier(s)		(((s) > 96000) ? 4 : \
+					(((s) > 48000) ? 2 : 1))
+#define	hdsp_freq_single(s)		((s) / hdsp_freq_multiplier(s))
+#define	hdsp_freq_reg_value(s)		(HDSP_FREQ_9632 / hdsp_freq_single(s))
 
 #define	HDSP_SPEED_DEFAULT		48000
 

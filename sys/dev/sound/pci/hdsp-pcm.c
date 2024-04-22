@@ -851,7 +851,6 @@ hdspchan_setspeed(kobj_t obj, void *data, uint32_t speed)
 	struct hdsp_rate *hr;
 	struct sc_chinfo *ch;
 	struct sc_info *sc;
-	long long period;
 	int threshold;
 	int i;
 
@@ -887,31 +886,14 @@ hdspchan_setspeed(kobj_t obj, void *data, uint32_t speed)
 		}
 	}
 
-	switch (sc->type) {
-	case HDSP_9652:
-	case HDSP_9632:
-		period = HDSP_FREQ_9632;
-		break;
-	default:
-		/* Unsupported card. */
-		goto end;
-	}
-
 	/* Write frequency on the device. */
 	sc->ctrl_register &= ~HDSP_FREQ_MASK;
 	sc->ctrl_register |= hr->reg;
 	hdsp_write_4(sc, HDSP_CONTROL_REG, sc->ctrl_register);
 
-	speed = hr->speed;
-	if (speed > 96000)
-		speed /= 4;
-	else if (speed > 48000)
-		speed /= 2;
-
 	if (sc->type == HDSP_9632) {
 		/* Set DDS value. */
-		period /= speed;
-		hdsp_write_4(sc, HDSP_FREQ_REG, period);
+		hdsp_write_4(sc, HDSP_FREQ_REG, hdsp_freq_reg_value(hr->speed));
 	}
 
 	sc->speed = hr->speed;
@@ -986,7 +968,7 @@ hdspchan_setblocksize(kobj_t obj, void *data, uint32_t blocksize)
 	/* Reset pointer, rewrite frequency (same register) for 9632. */
 	hdsp_write_4(sc, HDSP_RESET_POINTER, 0);
 	if (sc->type == HDSP_9632)
-		hdsp_write_4(sc, HDSP_FREQ_REG, HDSP_FREQ_9632 / sc->speed);
+		hdsp_write_4(sc, HDSP_FREQ_REG, hdsp_freq_reg_value(sc->speed));
 end:
 
 	return (sndbuf_getblksz(ch->buffer));
