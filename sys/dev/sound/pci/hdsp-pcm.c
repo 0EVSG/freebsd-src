@@ -75,10 +75,9 @@ static struct hdsp_rate rate_map[] = {
 	{  64000, (HDSP_FREQ_32000 | HDSP_FREQ_DOUBLE) },
 	{  88200, (HDSP_FREQ_44100 | HDSP_FREQ_DOUBLE) },
 	{  96000, (HDSP_FREQ_48000 | HDSP_FREQ_DOUBLE) },
-	/* TODO: Allow quad speed sample rates for HDSP 9632. */
-	/*{ 128000, (HDSP_FREQ_32000 | HDSP_FREQ_QUAD)   },
+	{ 128000, (HDSP_FREQ_32000 | HDSP_FREQ_QUAD)   },
 	{ 176400, (HDSP_FREQ_44100 | HDSP_FREQ_QUAD)   },
-	{ 192000, (HDSP_FREQ_48000 | HDSP_FREQ_QUAD)   },*/
+	{ 192000, (HDSP_FREQ_48000 | HDSP_FREQ_QUAD)   },
 
 	{ 0, 0 },
 };
@@ -865,6 +864,10 @@ hdspchan_setspeed(kobj_t obj, void *data, uint32_t speed)
 
 	if (hdsp_running(sc) == 1)
 		goto end;
+
+	/* HDSP 9652 only supports sample rates up to 96kHz. */
+	if (sc->type == HDSP_9652 && speed > 96000)
+		speed = 96000;
 
 	if (sc->force_speed > 0)
 		speed = sc->force_speed;
