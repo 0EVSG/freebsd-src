@@ -270,20 +270,21 @@ hdsp_hw_mixer(struct sc_chinfo *ch, unsigned int dst,
 static int
 hdspchan_setgain(struct sc_chinfo *ch)
 {
-	struct sc_info *sc;
 	uint32_t port, ports;
 	uint32_t slot, slots;
 	unsigned int offset;
 	unsigned short volume;
 
-	sc = ch->parent->sc;
-
 	/* Iterate through all physical ports of the channel. */
 	ports = ch->ports;
 	port = hdsp_port_first(ports);
 	while (port != 0) {
-		/* Get slot map from physical port. */
-		slots = hdsp_port_slot_map(port, sc->speed);
+		/*
+		 * Get slot map from physical port.
+		 * Unlike DMA buffers, the hardware mixer's channel mapping
+		 * does not change with double or quad speed sample rates.
+		 */
+		slots = hdsp_port_slot_map(port, 48000);
 		slot = hdsp_slot_first(slots);
 
 		/* Treat first slot as left channel. */
