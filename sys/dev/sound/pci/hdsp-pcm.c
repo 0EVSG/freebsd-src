@@ -705,7 +705,7 @@ hdspchan_init(kobj_t obj, void *devinfo, struct snd_dbuf *b,
 
 	/* HDSP 9652 does not support quad speed sample rates. */
 	if (sc->type == HDSP_9652) {
-		ch->cap_fmts[2] = 0;
+		ch->cap_fmts[2] = SND_FORMAT(AFMT_S32_LE, 2, 0);
 		ch->caps->maxspeed = 96000;
 	}
 
