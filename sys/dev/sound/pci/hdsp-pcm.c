@@ -557,7 +557,7 @@ buffer_copy(struct sc_chinfo *ch)
 	struct sc_info *sc;
 	uint32_t row, slots;
 	uint32_t dma_pos;
-	unsigned int pos, length, length2, offset, buffer_size;
+	unsigned int pos, length, remainder, offset, buffer_size;
 	unsigned int channels;
 
 	scp = ch->parent;
@@ -600,11 +600,10 @@ buffer_copy(struct sc_chinfo *ch)
 	length /= 4;
 	buffer_size /= sizeof(uint32_t);
 
-	length2 = 0;
-	if (pos + length > buffer_size) {
-		length2 = (pos + length) - buffer_size;
-		length = buffer_size - pos;
-	}
+	/* Split copy length to wrap around at buffer end. */
+	remainder = 0;
+	if (pos + length > buffer_size)
+		remainder = (pos + length) - buffer_size;
 
 	/* Iterate through rows of contiguous slots. */
 	slots = hdsp_port_slot_map(ch->ports, sc->speed);
@@ -614,21 +613,21 @@ buffer_copy(struct sc_chinfo *ch)
 	while (row != 0) {
 		if (ch->dir == PCMDIR_PLAY) {
 			buffer_mux_port(sc->pbuf, ch->data, row, slots, pos,
-			    length, channels);
+			    length - remainder, channels);
 			buffer_mux_port(sc->pbuf, ch->data, row, slots, 0,
-			    length2, channels);
+			    remainder, channels);
 		} else {
 			buffer_demux_port(sc->rbuf, ch->data, row, slots, pos,
-			    length, channels);
+			    length - remainder, channels);
 			buffer_demux_port(sc->rbuf, ch->data, row, slots, 0,
-			    length2, channels);
+			    remainder, channels);
 		}
 
 		slots &= ~row;
 		row = hdsp_slot_first_row(slots);
 	}
 
-	ch->position = ((pos + length + length2) * 4) % buffer_size;
+	ch->position = ((pos + length) * 4) % buffer_size;
 }
 
 static int
