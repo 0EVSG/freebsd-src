@@ -356,7 +356,6 @@ hdspmixer_set(struct snd_mixer *m, unsigned dev,
 		    (dev == SOUND_MIXER_RECLEV && ch->dir == PCMDIR_REC)) {
 			ch->lvol = left;
 			ch->rvol = right;
-			/* TODO: Why only set gain when running? */
 			if (ch->run)
 				hdspchan_setgain(ch);
 		}
@@ -792,7 +791,7 @@ hdspchan_getptr(kobj_t obj, void *data)
 	snd_mtxunlock(sc->lock);
 
 	pos = ret & HDSP_BUF_POSITION_MASK;
-	pos %= (2 * sc->period * sizeof(uint32_t));
+	pos %= (2 * sc->period * sizeof(uint32_t)); /* Double buffer. */
 	pos *= AFMT_CHANNEL(ch->format); /* Hardbuf with multiple channels. */
 
 	return (pos);
