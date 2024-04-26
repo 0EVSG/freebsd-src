@@ -30,7 +30,7 @@
 #define	PCI_VENDOR_XILINX		0x10ee
 #define	PCI_DEVICE_XILINX_HDSP		0x3fc5 /* HDSP 9652 */
 /* #define	PCI_CLASS_REVISION		0x08 */
-#define	PCI_REVISION_9632		212 /* TODO: HDSP 9632 revision */
+#define	PCI_REVISION_9632		0x9b
 #define	PCI_REVISION_9652		0x6c
 
 #define	HDSP_9632			0
