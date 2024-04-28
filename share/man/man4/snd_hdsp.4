@@ -55,9 +55,9 @@ driver supports the following audio devices:
 .Pp
 .Bl -bullet -compact
 .It
-RME HDSP AIO
+RME HDSP 9632
 .It
-RME HDSP RayDAT
+RME HDSP 9652
 .El
 .Pp
 By default, each
@@ -65,8 +65,9 @@ By default, each
 device corresponds to a physical port on the sound card.
 For ADAT ports, 8 channel, 4 channel and 2 channel formats are supported.
 The effective number of ADAT channels is 8 channels at single speed
-(32kHz-48kHz), 4 channels at double speed (64kHz-96kHz), and 2 channels at
-quad speed (128kHz-192kHz).
+(32kHz-48kHz) and 4 channels at double speed (64kHz-96kHz).
+Only the HDSP 9632 can operate at quad speed (128kHz-192kHz), ADAT is
+disabled in this mode.
 Depending on sample rate and channel format selected, not all pcm channels can
 be mapped to ADAT channels and vice versa.
 .Sh LOADER TUNABLES
@@ -81,11 +82,11 @@ When opened in multi-channel audio software, this makes all ports available
 at the same time, and fully synchronized.
 For resulting channel numbers consult the following table:
 .El
-.Bl -column "HDSP RayDAT" "Single Speed" "Double Speed" "Quad Speed"
+.Bl -column "Sound Card" "Single Speed" "Double Speed" "Quad Speed"
 .Sy "Sound Card" Ta Sy "Single Speed" Ta Sy "Double Speed" Ta Sy "Quad Speed"
 .It "" Ta "Play | Rec" Ta "Play | Rec" Ta "Play | Rec"
-.It HDSP AIO Ta " 16  |  14" Ta " 12  |  10" Ta " 10  |   8"
-.It HDSP RayDAT Ta " 36  |  36" Ta " 20  |  20" Ta " 12  |  12"
+.It HDSP 9632 Ta " 16  |  14" Ta " 12  |  10" Ta " 10  |   8"
+.It HDSP 9652 Ta " 36  |  36" Ta " 20  |  20" Ta " 12  |  12"
 .El
 .Sh SYSCTL TUNABLES
 These settings and informational values can be accessed at runtime with the
