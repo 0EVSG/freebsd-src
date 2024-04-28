@@ -29,7 +29,6 @@
 
 #define	PCI_VENDOR_XILINX		0x10ee
 #define	PCI_DEVICE_XILINX_HDSP		0x3fc5 /* HDSP 9652 */
-/* #define	PCI_CLASS_REVISION		0x08 */
 #define	PCI_REVISION_9632		0x9b
 #define	PCI_REVISION_9652		0x6c
 
@@ -47,7 +46,6 @@
 #define	HDSP_CONTROL2_9652_MIXER	(1 << 11)
 
 /* Buffer */
-/* TODO: These are probably set in buffer address registers. */
 #define	HDSP_PAGE_ADDR_BUF_OUT		32
 #define	HDSP_PAGE_ADDR_BUF_IN		36
 #define	HDSP_BUF_POSITION_MASK		0x000FFC0
@@ -58,13 +56,12 @@
 #define	HDSP_FREQ_DOUBLE		(1 << 8)
 #define	HDSP_FREQ_QUAD			(1 << 31)
 
-#define	HDSP_FREQ_32000		HDSP_FREQ_0
-#define	HDSP_FREQ_44100		HDSP_FREQ_1
-#define	HDSP_FREQ_48000		(HDSP_FREQ_0 | HDSP_FREQ_1)
+#define	HDSP_FREQ_32000			HDSP_FREQ_0
+#define	HDSP_FREQ_44100			HDSP_FREQ_1
+#define	HDSP_FREQ_48000			(HDSP_FREQ_0 | HDSP_FREQ_1)
 #define	HDSP_FREQ_MASK			(HDSP_FREQ_0 | HDSP_FREQ_1 |	\
 					HDSP_FREQ_DOUBLE | HDSP_FREQ_QUAD)
 #define	HDSP_FREQ_MASK_DEFAULT		HDSP_FREQ_48000
-/* TODO: Only needed for 9632, firmware >= 152? */
 #define	HDSP_FREQ_REG			0
 #define	HDSP_FREQ_9632			104857600000000ULL
 #define	hdsp_freq_multiplier(s)		(((s) > 96000) ? 4 : \
@@ -107,7 +104,6 @@
 #define	HDSP_PhoneGainMinus12dB		0
 
 /* Settings */
-/* TODO: Out buffer address register (32) and in buffer address register (36) */
 #define	HDSP_RESET_POINTER		0
 #define	HDSP_CONTROL_REG		64
 #define	HDSP_CONTROL2_REG		256

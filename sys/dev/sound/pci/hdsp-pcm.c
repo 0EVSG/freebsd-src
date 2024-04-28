@@ -50,7 +50,6 @@ struct hdsp_latency {
 };
 
 static struct hdsp_latency latency_map[] = {
-	/* TODO: 32 samples latency is not supported by HDSP 9632? */
 	{ 7,   32, 0.7 },
 	{ 0,   64, 1.5 },
 	{ 1,  128,   3 },
