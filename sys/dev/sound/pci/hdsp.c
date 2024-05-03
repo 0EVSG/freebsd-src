@@ -52,7 +52,6 @@ static SYSCTL_NODE(_hw, OID_AUTO, hdsp, CTLFLAG_RW | CTLFLAG_MPSAFE, 0,
 SYSCTL_BOOL(_hw_hdsp, OID_AUTO, unified_pcm, CTLFLAG_RWTUN,
     &hdsp_unified_pcm, 0, "Combine physical ports in one unified pcm device");
 
-/* TODO: Verify available clock sources for 9632. */
 static struct hdsp_clock_source hdsp_clock_source_table_9632[] = {
 	{ "internal", HDSP_CLOCK_INTERNAL },
 	{ "adat",     HDSP_CLOCK_ADAT1    },
@@ -284,7 +283,6 @@ hdsp_sysctl_period(SYSCTL_HANDLER_ARGS)
 	/* Period is from 2^5 to 2^14, 0 falls back to pcm latency settings. */
 	sc->force_period = 0;
 	if (period > 0) {
-		/* TODO: Period of 32 not supported by HDSP 9632? */
 		sc->force_period = 32;
 		while (sc->force_period < period && sc->force_period < 4096)
 			sc->force_period <<= 1;
