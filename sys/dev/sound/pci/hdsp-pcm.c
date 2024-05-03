@@ -32,6 +32,8 @@
  * Supported cards: HDSP 9632, HDSP 9652.
  */
 
+#include <sys/libkern.h>
+
 #include <dev/sound/pcm/sound.h>
 #include <dev/sound/pci/hdsp.h>
 #include <dev/sound/chip.h>
@@ -156,13 +158,7 @@ hdsp_slot_first_n(uint32_t slots, unsigned int n)
 static unsigned int
 hdsp_slot_count(uint32_t slots)
 {
-	unsigned int count = 0;
-
-	/* TODO: Use bitcount() from libkern.h? */
-	for (int i = 0; i < (sizeof(slots) * 8); ++i) {
-		count += ((slots >> i) & 0x01);
-	}
-	return (count);
+	return (bitcount32(slots));
 }
 
 static unsigned int
