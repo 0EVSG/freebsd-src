@@ -652,7 +652,7 @@ hdsp_attach(device_t dev)
 	uint32_t rev;
 	int i, err;
 
-#if 1
+#if 0
 	device_printf(dev, "hdsp_attach()\n");
 #endif
 

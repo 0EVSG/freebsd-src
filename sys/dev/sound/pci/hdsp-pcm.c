@@ -340,7 +340,7 @@ hdspmixer_set(struct snd_mixer *m, unsigned dev,
 
 	scp = mix_getdevinfo(m);
 
-#if 1
+#if 0
 	device_printf(scp->dev, "hdspmixer_set() %d %d\n",
 	    left, right);
 #endif
@@ -425,7 +425,7 @@ hdsp_running(struct sc_info *sc)
 	return (0);
 bad:
 
-#if 1
+#if 0
 	device_printf(sc->dev, "hdsp is running\n");
 #endif
 
@@ -738,7 +738,7 @@ hdspchan_trigger(kobj_t obj, void *data, int go)
 	snd_mtxlock(sc->lock);
 	switch (go) {
 	case PCMTRIG_START:
-#if 1
+#if 0
 		device_printf(scp->dev, "hdspchan_trigger(): start\n");
 #endif
 		hdspchan_enable(ch, 1);
@@ -748,7 +748,7 @@ hdspchan_trigger(kobj_t obj, void *data, int go)
 
 	case PCMTRIG_STOP:
 	case PCMTRIG_ABORT:
-#if 1
+#if 0
 		device_printf(scp->dev, "hdspchan_trigger(): stop or abort\n");
 #endif
 		clean(ch);
@@ -802,7 +802,7 @@ hdspchan_free(kobj_t obj, void *data)
 	scp = ch->parent;
 	sc = scp->sc;
 
-#if 1
+#if 0
 	device_printf(scp->dev, "hdspchan_free()\n");
 #endif
 
@@ -827,7 +827,7 @@ hdspchan_setformat(kobj_t obj, void *data, uint32_t format)
 
 	ch = data;
 
-#if 1
+#if 0
 	struct sc_pcminfo *scp = ch->parent;
 	device_printf(scp->dev, "hdspchan_setformat(%d)\n", format);
 #endif
@@ -852,7 +852,7 @@ hdspchan_setspeed(kobj_t obj, void *data, uint32_t speed)
 	sc = scp->sc;
 	hr = NULL;
 
-#if 1
+#if 0
 	device_printf(scp->dev, "hdspchan_setspeed(%d)\n", speed);
 #endif
 
@@ -914,7 +914,7 @@ hdspchan_setblocksize(kobj_t obj, void *data, uint32_t blocksize)
 	sc = scp->sc;
 	hl = NULL;
 
-#if 1
+#if 0
 	device_printf(scp->dev, "hdspchan_setblocksize(%d)\n", blocksize);
 #endif
 
@@ -955,7 +955,7 @@ hdspchan_setblocksize(kobj_t obj, void *data, uint32_t blocksize)
 	sc->period = hl->period;
 	snd_mtxunlock(sc->lock);
 
-#if 1
+#if 0
 	device_printf(scp->dev, "New period=%d\n", sc->period);
 #endif
 
@@ -986,7 +986,7 @@ hdspchan_getcaps(kobj_t obj, void *data)
 
 	ch = data;
 
-#if 1
+#if 0
 	device_printf(ch->parent->dev, "hdspchan_getcaps()\n");
 #endif
 
@@ -1013,7 +1013,7 @@ static int
 hdsp_pcm_probe(device_t dev)
 {
 
-#if 1
+#if 0
 	device_printf(dev,"hdsp_pcm_probe()\n");
 #endif
 
